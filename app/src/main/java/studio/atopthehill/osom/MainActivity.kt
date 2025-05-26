@@ -3,6 +3,7 @@ package studio.atopthehill.osom
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -21,8 +22,7 @@ class MainActivity : ComponentActivity() {
             OSOMTheme {
                 Surface(
                         modifier = Modifier
-                        .fillMaxSize()
-                        .padding(8.dp) // Adds 8dp padding on all sides.
+                        .fillMaxSize() // Adds 8dp padding on all sides.
                         .navigationBarsPadding() // adds padding to system navigation bar
                         .imePadding(),
                         color = MaterialTheme.colorScheme.background

@@ -1,0 +1,208 @@
+# OSOM Launcher v2 Rules and Specifications
+
+## Core Functionality
+
+### App Launch Flow
+1. **Time Limit Requirement**
+   - Every app launch must include a time limit
+   - Time is always specified in minutes as an integer
+   - Maximum allowed time is 15 minutes
+   - If user inputs > 15 minutes, automatically cap at 15 minutes with message
+   - App must automatically close after the specified duration
+
+### Hall of Shame Cards
+1. **Card Content**
+   - Display time opened (HH:MM format)
+   - App name
+   - Duration used (mm min ss sec format)
+   - Reason for opening
+   - Cards are swipeable (Tinder-style) for dismissal
+   - Cards represent a "walk of shame" for app usage
+
+2. **Card List Behavior**
+   - Located in top 20% of screen
+   - Scrollable vertically
+   - New cards animate in from bottom
+   - Dismissal animation similar to Tinder (works both directions)
+   - Cards persist across sessions as a usage history
+
+### Home Screen Layout (Top to Bottom)
+1. **Hall of Shame Section (20% of screen)**
+   - Scrollable list of app usage cards
+   - Each card shows: open time, app name, duration, reason
+
+2. **Daily Usage Timeline (Small bar)**
+   - Represents 24-hour period (3AM to 3AM)
+   - Darkened segments show phone usage periods
+   - Located directly below card list
+
+3. **Chat Interface (Middle of screen)**
+   - Messages appear with left-to-right fade animation
+   - Uses Fraunces font (regular and italic)
+   - E-ink reader aesthetic with warm backlight
+   - Messages include:
+     - Welcome message with user stats
+     - App-specific prompts
+     - Reason prompts
+     - Time limit prompts
+     - Confirmation messages
+
+4. **Input Card Template (Bottom)**
+   - No visible borders or outlines
+   - Blinking cursor for text input
+   - Fields for:
+     - App name
+     - Reason
+     - Duration
+   - Focus moves automatically between fields
+   - Uses Fraunces font
+   - E-ink reader aesthetic
+
+### Conversation Flow
+1. **Welcome Message**
+   ```
+   "Welcome {user_name}, this is your {n}th interaction with me today. 
+   You have used your phone today for {xx} hrs and {xx} mins. 
+   What do you wish to achieve?"
+   ```
+
+2. **App Name Response**
+   ```
+   "And what do you wish to achieve by opening {app_name}?"
+   ```
+
+3. **Reason Response**
+   ```
+   "And how long would it take to achieve your objective?"
+   ```
+
+4. **Time Limit Response**
+   ```
+   "Great - opening {app_name} for you to {reason} for {time} mins. 
+   Wait for a second and open the app."
+   ```
+
+## Technical Specifications
+
+### UI/UX Requirements
+1. **Typography**
+   - Primary Font: Fraunces (Regular and Italic)
+   - Font Location: res/font/
+   - Style: Old style serif
+   - E-ink reader aesthetic
+
+2. **Animations**
+   - Message fade: Left to right
+   - Card addition: Bottom to top
+   - Card dismissal: Tinder-style swipe
+   - Smooth transitions between states
+
+3. **Input Fields**
+   - No visible borders
+   - Blinking cursor
+   - Automatic focus management
+   - E-ink reader aesthetic
+
+4. **Color Scheme**
+   - Warm backlight
+   - E-ink reader aesthetic
+   - High contrast for readability
+   - Subtle shadows for depth
+
+### State Management
+1. **App Usage Tracking**
+   - Track daily usage statistics
+   - Store card history
+   - Monitor active app sessions
+   - Handle app closure after time limit
+
+2. **User Session**
+   - Track number of daily interactions
+   - Calculate total phone usage time
+   - Maintain conversation state
+   - Handle app launch and closure
+
+### Data Models
+1. **Usage Card**
+   ```kotlin
+   data class UsageCard(
+       val appName: String,
+       val openTime: LocalTime,
+       val duration: Duration,
+       val reason: String,
+       val timestamp: LocalDateTime
+   )
+   ```
+
+2. **User Stats**
+   ```kotlin
+   data class UserStats(
+       val dailyInteractions: Int,
+       val totalUsageToday: Duration,
+       val lastInteraction: LocalDateTime
+   )
+   ```
+
+### Technical Considerations
+1. **App Closure**
+   - Implement reliable app closure mechanism
+   - Handle system permissions
+   - Graceful timeout handling
+   - Background service for monitoring
+
+2. **Performance**
+   - Smooth animations
+   - Efficient card list rendering
+   - Responsive input handling
+   - Battery-efficient usage tracking
+
+3. **Accessibility**
+   - High contrast text
+   - Clear focus indicators
+   - Readable font sizes
+   - Screen reader support
+
+## Implementation Phases
+
+### Phase 1: Core Infrastructure
+- Update data models
+- Implement time limit functionality
+- Create card system
+- Set up usage tracking
+
+### Phase 2: UI Implementation
+- Implement new layout
+- Add animations
+- Integrate Fraunces font
+- Create e-ink aesthetic
+
+### Phase 3: Conversation Flow
+- Implement new message system
+- Add automatic focus management
+- Create input card template
+- Add usage timeline
+
+### Phase 4: Polish
+- Add animations
+- Implement card dismissal
+- Add usage statistics
+- Optimize performance
+
+## Testing Requirements
+1. **Functional Testing**
+   - Time limit enforcement
+   - App closure
+   - Card creation and management
+   - Conversation flow
+
+2. **UI Testing**
+   - Animation smoothness
+   - Font rendering
+   - Input field behavior
+   - Card interactions
+
+3. **Performance Testing**
+   - Animation performance
+   - Memory usage
+   - Battery impact
+   - App closure reliability 

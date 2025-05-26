@@ -9,3 +9,16 @@ val Pink80 = Color(0xFFEFB8C8)
 val Purple40 = Color(0xFF6650a4)
 val PurpleGrey40 = Color(0xFF625b71)
 val Pink40 = Color(0xFF7D5260)
+
+// E-Ink Inspired Palette
+val EInkBackground = Color(0xFFEFE7C9) // Corrected: A warm, creamy off-white
+val EInkTextPrimary = Color(0xFF2C3C35) // Dark grey, not quite black
+val EInkTextSecondary = Color(0xFF4C6459) // Slightly lighter grey for secondary text
+val EInkTextTertiary = Color(0xFFC5BA9C)
+val EInkAccent = Color(0xFFCA6A54)
+val EInkError = Color(0xFFC0391A) // Dark color for buttons/accents, similar to Kindle button
+val EInkLineArt = Color(0xFFC5BA9C) // For subtle lines or illustrations if needed
+
+// Optional: define dark theme e-ink colors if you plan to support it
+// val EInkBackgroundDark = Color(0xFF2A2826)
+// val EInkTextPrimaryDark = Color(0xFFD3CEC9)

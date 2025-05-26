@@ -6,14 +6,20 @@ import android.graphics.Bitmap // Bitmap for handling app icons
 import android.graphics.drawable.BitmapDrawable // Drawable to Bitmap conversion
 import androidx.core.graphics.drawable.toBitmap // Extension function for Drawable to Bitmap
 import java.io.ByteArrayOutputStream // For converting Bitmap to ByteArray
+import java.time.Duration
+import java.time.LocalDateTime
 import kotlinx.coroutines.Dispatchers // Coroutine dispatcher for IO operations
 import kotlinx.coroutines.flow.Flow // Kotlin Coroutines Flow for asynchronous data streams
 import kotlinx.coroutines.withContext // Coroutine scope for switching dispatchers
 import studio.atopthehill.osom.data.db.AppDatabase // The Room database instance
 import studio.atopthehill.osom.data.db.dao.AppInfoDao // DAO for AppInfo entity
 import studio.atopthehill.osom.data.db.dao.AppUsageDao // DAO for AppUsage entity
+import studio.atopthehill.osom.data.db.dao.UsageCardDao
+import studio.atopthehill.osom.data.db.dao.UserStatsDao
 import studio.atopthehill.osom.data.db.entity.AppInfo // AppInfo entity
 import studio.atopthehill.osom.data.db.entity.AppUsage // AppUsage entity
+import studio.atopthehill.osom.data.db.entity.UsageCard
+import studio.atopthehill.osom.data.db.entity.UserStats
 
 class AppRepository(
         private val context: Context
@@ -23,6 +29,10 @@ class AppRepository(
                 AppDatabase.getDatabase(context).appInfoDao() // Instance of AppInfoDao
         private val appUsageDao: AppUsageDao =
                 AppDatabase.getDatabase(context).appUsageDao() // Instance of AppUsageDao
+        private val usageCardDao: UsageCardDao = // Instance of UsageCardDao
+                AppDatabase.getDatabase(context).usageCardDao()
+        private val userStatsDao: UserStatsDao = // Instance of UserStatsDao
+                AppDatabase.getDatabase(context).userStatsDao()
 
         // --- AppInfo Operations ---
 
@@ -103,7 +113,7 @@ class AppRepository(
                 appInfoDao.insertOrUpdateApp(appInfo)
         }
 
-        // --- AppUsage Operations ---
+        // --- AppUsage (Old - to be reviewed if still needed or replaced by UsageCard) ---
 
         suspend fun logAppUsage(packageName: String, reason: String) { // Log an app usage event
                 val usage =
@@ -122,5 +132,59 @@ class AppRepository(
 
         fun getAllUsageRecords(): Flow<List<AppUsage>> { // Get all usage records
                 return appUsageDao.getAllUsageRecords()
+        }
+
+        // --- UsageCard Operations ---
+        fun getAllUsageCards(): Flow<List<UsageCard>> = usageCardDao.getAllUsageCards()
+
+        fun getUsageCardsForDay(day: LocalDateTime): Flow<List<UsageCard>> {
+                val dateString =
+                        day.toLocalDate()
+                                .format(
+                                        java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
+                                ) // YYYY-MM-DD
+                return usageCardDao.getUsageCardsForDay(dateString)
+        }
+
+        fun getActiveUsageCards(): Flow<List<UsageCard>> = usageCardDao.getActiveUsageCards()
+
+        suspend fun insertUsageCard(usageCard: UsageCard): Long {
+                return usageCardDao.insertUsageCard(usageCard)
+        }
+
+        suspend fun updateUsageCard(usageCard: UsageCard) {
+                usageCardDao.updateUsageCard(usageCard)
+        }
+
+        suspend fun getUsageCardById(id: Long): UsageCard? {
+                return usageCardDao.getUsageCardById(id)
+        }
+
+        suspend fun deleteUsageCardById(id: Long) {
+                usageCardDao.deleteUsageCardById(id)
+        }
+
+        // --- UserStats Operations ---
+        fun getUserStats(): Flow<UserStats?> = userStatsDao.getUserStats()
+
+        suspend fun getUserStatsDirect(): UserStats? = userStatsDao.getUserStatsDirect()
+
+        suspend fun insertOrUpdateUserStats(userStats: UserStats) {
+                userStatsDao.insertOrUpdateStats(userStats)
+        }
+
+        suspend fun initializeDefaultUserStatsIfNeeded() {
+                withContext(Dispatchers.IO) {
+                        if (userStatsDao.getUserStatsDirect() == null) {
+                                val defaultStats =
+                                        UserStats(
+                                                dailyInteractions = 0,
+                                                totalUsageToday = Duration.ZERO,
+                                                lastInteraction = LocalDateTime.now(),
+                                                userName = "Ketan" // Set default username
+                                        )
+                                userStatsDao.insertOrUpdateStats(defaultStats)
+                        }
+                }
         }
 }

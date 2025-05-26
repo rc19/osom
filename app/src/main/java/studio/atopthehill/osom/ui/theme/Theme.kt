@@ -1,58 +1,86 @@
 package studio.atopthehill.osom.ui.theme
 
 import android.app.Activity
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
-)
+private val EInkLightColorScheme =
+        lightColorScheme(
+                primary = EInkAccent, // Primary actions, buttons
+                onPrimary = EInkBackground, // Text on primary actions
+                secondary = EInkTextSecondary, // Secondary elements, less prominent text
+                onSecondary = EInkBackground,
+                tertiary = EInkLineArt, // Borders, lines
+                onTertiary = EInkTextPrimary,
+                background = EInkBackground, // App background
+                onBackground = EInkTextPrimary, // Main text color on background
+                surface = EInkBackground, // Surfaces like cards
+                onSurface = EInkTextPrimary, // Text on surfaces
+                error = EInkError, // Standard error color, can be adapted
+                onError = Color.White
+                // Other colors can be defined as needed or left to defaults
+                )
 
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
-)
+// Example for a dark E-Ink theme, if we were to implement it fully
+private val EInkDarkColorScheme =
+        darkColorScheme(
+                primary = EInkBackground, // Light text/icons on dark buttons
+                onPrimary = EInkAccent,
+                secondary = EInkLineArt,
+                onSecondary = EInkTextPrimary,
+                tertiary = EInkTextSecondary,
+                onTertiary = EInkBackground,
+                background = EInkAccent, // Dark background
+                onBackground = EInkBackground, // Light text on dark background
+                surface = EInkAccent, // Dark surfaces
+                onSurface = EInkBackground, // Light text on dark surfaces
+                error = Color(0xFFCF6679),
+                onError = Color.Black
+        )
 
 @Composable
 fun OSOMTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
-    content: @Composable () -> Unit
+        darkTheme: Boolean = isSystemInDarkTheme(),
+        // Dynamic color is available on Android 12+ but we'll override with E-Ink
+        dynamicColor: Boolean = false, // Set to false to enforce our E-Ink theme
+        content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        val colorScheme =
+                when {
+                        // For now, always use EInkLightColorScheme as per V2 rules for e-ink
+                        // display
+                        // dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+                        //     val context = LocalContext.current
+                        //     if (darkTheme) dynamicDarkColorScheme(context) else
+                        // dynamicLightColorScheme(context)
+                        // }
+                        // darkTheme -> EInkDarkColorScheme // Uncomment if a dark e-ink theme is
+                        // defined
+                        // and desired
+                        else -> EInkLightColorScheme
+                }
+        val view = LocalView.current
+        if (!view.isInEditMode) {
+                SideEffect {
+                        val window = (view.context as Activity).window
+                        window.statusBarColor =
+                                colorScheme.background.toArgb() // Match status bar to background
+                        WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars =
+                                !darkTheme // Adjust status bar icons
+                }
         }
 
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
-
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+        MaterialTheme(
+                colorScheme = colorScheme,
+                typography = AppTypography, // Use our Fraunces typography
+                content = content
+        )
 }
