@@ -49,4 +49,12 @@ interface AppUsageDao { // Defines the DAO interface for AppUsage entities
 
         @Query("DELETE FROM app_usage") // SQL query to delete all usage records from the table
         suspend fun clearAllUsage() // Suspended function to clear the entire app_usage table
+
+        @Query("SELECT * FROM app_usage WHERE id = :id LIMIT 1")
+        suspend fun getAppUsageById(id: Long): AppUsage?
+
+        @Query(
+                "UPDATE app_usage SET actual_duration_millis = :actualDurationMillis WHERE id = :usageId"
+        )
+        suspend fun updateActualDuration(usageId: Long, actualDurationMillis: Long)
 }

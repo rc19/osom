@@ -14,11 +14,9 @@ import kotlinx.coroutines.withContext // Coroutine scope for switching dispatche
 import studio.atopthehill.osom.data.db.AppDatabase // The Room database instance
 import studio.atopthehill.osom.data.db.dao.AppInfoDao // DAO for AppInfo entity
 import studio.atopthehill.osom.data.db.dao.AppUsageDao // DAO for AppUsage entity
-import studio.atopthehill.osom.data.db.dao.UsageCardDao
 import studio.atopthehill.osom.data.db.dao.UserStatsDao
 import studio.atopthehill.osom.data.db.entity.AppInfo // AppInfo entity
 import studio.atopthehill.osom.data.db.entity.AppUsage // AppUsage entity
-import studio.atopthehill.osom.data.db.entity.UsageCard
 import studio.atopthehill.osom.data.db.entity.UserStats
 
 class AppRepository(
@@ -29,8 +27,6 @@ class AppRepository(
                 AppDatabase.getDatabase(context).appInfoDao() // Instance of AppInfoDao
         private val appUsageDao: AppUsageDao =
                 AppDatabase.getDatabase(context).appUsageDao() // Instance of AppUsageDao
-        private val usageCardDao: UsageCardDao = // Instance of UsageCardDao
-                AppDatabase.getDatabase(context).usageCardDao()
         private val userStatsDao: UserStatsDao = // Instance of UserStatsDao
                 AppDatabase.getDatabase(context).userStatsDao()
 
@@ -113,15 +109,29 @@ class AppRepository(
                 appInfoDao.insertOrUpdateApp(appInfo)
         }
 
-        // --- AppUsage (Old - to be reviewed if still needed or replaced by UsageCard) ---
+        // --- AppUsage Operations ---
 
-        suspend fun logAppUsage(packageName: String, reason: String) { // Log an app usage event
+        suspend fun logAppUsage(
+                packageName: String,
+                reason: String,
+                requestedDurationMinutes: Int
+        ): Long { // Log an app usage event
                 val usage =
                         AppUsage(
                                 packageName = packageName,
-                                reason = reason
+                                reason = reason,
+                                requestedDurationMinutes = requestedDurationMinutes,
+                                actualDurationMillis = null // Initially null
                         ) // Create AppUsage entity
-                appUsageDao.insertAppUsage(usage) // Insert into database
+                return appUsageDao.insertAppUsage(usage) // Insert into database and return ID
+        }
+
+        suspend fun getAppUsageById(id: Long): AppUsage? {
+                return appUsageDao.getAppUsageById(id)
+        }
+
+        suspend fun updateAppUsageActualDuration(usageId: Long, actualDuration: Duration) {
+                appUsageDao.updateActualDuration(usageId, actualDuration.toMillis())
         }
 
         fun getUsageForApp(
@@ -132,36 +142,6 @@ class AppRepository(
 
         fun getAllUsageRecords(): Flow<List<AppUsage>> { // Get all usage records
                 return appUsageDao.getAllUsageRecords()
-        }
-
-        // --- UsageCard Operations ---
-        fun getAllUsageCards(): Flow<List<UsageCard>> = usageCardDao.getAllUsageCards()
-
-        fun getUsageCardsForDay(day: LocalDateTime): Flow<List<UsageCard>> {
-                val dateString =
-                        day.toLocalDate()
-                                .format(
-                                        java.time.format.DateTimeFormatter.ISO_LOCAL_DATE
-                                ) // YYYY-MM-DD
-                return usageCardDao.getUsageCardsForDay(dateString)
-        }
-
-        fun getActiveUsageCards(): Flow<List<UsageCard>> = usageCardDao.getActiveUsageCards()
-
-        suspend fun insertUsageCard(usageCard: UsageCard): Long {
-                return usageCardDao.insertUsageCard(usageCard)
-        }
-
-        suspend fun updateUsageCard(usageCard: UsageCard) {
-                usageCardDao.updateUsageCard(usageCard)
-        }
-
-        suspend fun getUsageCardById(id: Long): UsageCard? {
-                return usageCardDao.getUsageCardById(id)
-        }
-
-        suspend fun deleteUsageCardById(id: Long) {
-                usageCardDao.deleteUsageCardById(id)
         }
 
         // --- UserStats Operations ---
@@ -184,6 +164,39 @@ class AppRepository(
                                                 userName = "Ketan" // Set default username
                                         )
                                 userStatsDao.insertOrUpdateStats(defaultStats)
+                        }
+                }
+        }
+
+        // New method to update UserStats with actual usage duration
+        // This will be called by AppTimerService
+        suspend fun recordUsageInUserStats(actualDuration: Duration) {
+                withContext(Dispatchers.IO) {
+                        val currentStats = userStatsDao.getUserStatsDirect()
+                        if (currentStats != null) {
+                                val updatedStats =
+                                        currentStats.copy(
+                                                totalUsageToday =
+                                                        currentStats.totalUsageToday.plus(
+                                                                actualDuration
+                                                        ),
+                                                lastInteraction =
+                                                        LocalDateTime.now() // Optionally update
+                                                // lastInteraction time
+                                                )
+                                userStatsDao.insertOrUpdateStats(updatedStats)
+                        } else {
+                                // Handle case where stats are not initialized, though
+                                // initializeDefaultUserStatsIfNeeded should prevent this
+                                val newStats =
+                                        UserStats(
+                                                dailyInteractions =
+                                                        0, // Or 1 if this interaction counts
+                                                totalUsageToday = actualDuration,
+                                                lastInteraction = LocalDateTime.now(),
+                                                userName = "Ketan" // Default or fetch if available
+                                        )
+                                userStatsDao.insertOrUpdateStats(newStats)
                         }
                 }
         }

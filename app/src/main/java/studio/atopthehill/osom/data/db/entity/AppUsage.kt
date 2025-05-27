@@ -30,5 +30,9 @@ data class AppUsage(
         @ColumnInfo(name = "timestamp")
         val timestamp: Long = System.currentTimeMillis(), // Timestamp of when the app was opened
         @ColumnInfo(name = "reason")
-        val reason: String // Reason provided by the user for opening the app
+        val reason: String, // Reason provided by the user for opening the app
+        @ColumnInfo(name = "requested_duration_minutes")
+        val requestedDurationMinutes: Int?, // Requested duration in minutes
+        @ColumnInfo(name = "actual_duration_millis")
+        val actualDurationMillis: Long? // Actual usage duration in milliseconds
 )

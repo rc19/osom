@@ -85,39 +85,49 @@ val FrauncesFontFamily =
                 // e.g., Font(R.font.fraunces_variable, FontWeight.Bold, FontStyle.Normal) for bold
                 )
 
+val PromptFontFamily =
+        FontFamily(
+                Font(R.font.prompt_regular, FontWeight.Normal),
+                Font(R.font.prompt_extralight, FontWeight.ExtraLight)
+        )
+
+val GaramondFontFamily =
+        FontFamily(
+                Font(R.font.garamond_regular, FontWeight.Normal)
+        )
+
 // Replace with your app's specific typography
 // Set of Material typography styles to start with
 val AppTypography =
         Typography(
                 displayLarge =
                         TextStyle(
-                                fontFamily = FrauncesFontFamily,
-                                fontWeight = FontWeight.Bold,
+                                fontFamily = GaramondFontFamily,
+                                fontWeight = FontWeight.Normal,
                                 fontSize = 57.sp,
                                 lineHeight = 64.sp,
                                 letterSpacing = (-0.25).sp
                         ),
                 displayMedium =
                         TextStyle(
-                                fontFamily = FrauncesFontFamily,
-                                fontWeight = FontWeight.Bold,
+                                fontFamily = GaramondFontFamily,
+                                fontWeight = FontWeight.Normal,
                                 fontSize = 45.sp,
                                 lineHeight = 52.sp,
                                 letterSpacing = 0.sp
                         ),
                 displaySmall =
                         TextStyle(
-                                fontFamily = FrauncesFontFamily,
-                                fontWeight = FontWeight.Bold,
+                                fontFamily = GaramondFontFamily,
+                                fontWeight = FontWeight.Normal,
                                 fontSize = 36.sp,
                                 lineHeight = 44.sp,
                                 letterSpacing = 0.sp
                         ),
                 headlineLarge =
                         TextStyle(
-                                fontFamily = FrauncesFontFamily,
-                                fontWeight =
-                                        FontWeight.Bold, // Consider a bolder weight if available
+                                fontFamily = GaramondFontFamily,
+                                fontWeight = FontWeight.Normal, // Consider a bolder weight if available
                                 // and desired
                                 fontSize = 32.sp,
                                 lineHeight = 40.sp,
@@ -125,31 +135,31 @@ val AppTypography =
                         ),
                 headlineMedium =
                         TextStyle(
-                                fontFamily = FrauncesFontFamily,
-                                fontWeight = FontWeight.Bold,
+                                fontFamily = GaramondFontFamily,
+                                fontWeight = FontWeight.Normal,
                                 fontSize = 28.sp,
                                 lineHeight = 36.sp,
                                 letterSpacing = 0.sp
                         ),
                 headlineSmall =
                         TextStyle(
-                                fontFamily = FrauncesFontFamily,
-                                fontWeight = FontWeight.Bold,
+                                fontFamily = GaramondFontFamily,
+                                fontWeight = FontWeight.Normal,
                                 fontSize = 24.sp,
                                 lineHeight = 32.sp,
                                 letterSpacing = 0.sp
                         ),
                 titleLarge =
                         TextStyle(
-                                fontFamily = FrauncesFontFamily,
-                                fontWeight = FontWeight.Bold, // Titles often look good bold
+                                fontFamily = PromptFontFamily,
+                                fontWeight = FontWeight.Normal, // Titles often look good bold
                                 fontSize = 22.sp,
                                 lineHeight = 28.sp,
                                 letterSpacing = 0.sp
                         ),
                 titleMedium =
                         TextStyle(
-                                fontFamily = FrauncesFontFamily,
+                                fontFamily = PromptFontFamily,
                                 fontWeight = FontWeight.Normal,
                                 fontSize = 16.sp,
                                 lineHeight = 24.sp,
@@ -157,7 +167,7 @@ val AppTypography =
                         ),
                 titleSmall =
                         TextStyle(
-                                fontFamily = FrauncesFontFamily,
+                                fontFamily = PromptFontFamily,
                                 fontWeight = FontWeight.Normal,
                                 fontSize = 14.sp,
                                 lineHeight = 20.sp,
@@ -165,52 +175,52 @@ val AppTypography =
                         ),
                 bodyLarge =
                         TextStyle(
-                                fontFamily = FrauncesFontFamily,
-                                fontWeight = FontWeight.Normal,
+                                fontFamily = PromptFontFamily,
+                                fontWeight = FontWeight.ExtraLight,
                                 fontSize = 16.sp,
                                 lineHeight = 24.sp,
                                 letterSpacing = 0.5.sp
                         ),
                 bodyMedium =
                         TextStyle(
-                                fontFamily = FrauncesFontFamily,
-                                fontWeight = FontWeight.Normal,
+                                fontFamily = PromptFontFamily,
+                                fontWeight = FontWeight.ExtraLight,
                                 fontSize = 14.sp,
                                 lineHeight = 20.sp,
                                 letterSpacing = 0.25.sp
                         ),
                 bodySmall =
                         TextStyle(
-                                fontFamily = FrauncesFontFamily,
-                                fontWeight = FontWeight.Normal,
+                                fontFamily = PromptFontFamily,
+                                fontWeight = FontWeight.ExtraLight,
                                 fontSize = 12.sp,
                                 lineHeight = 16.sp,
                                 letterSpacing = 0.4.sp
                         ),
                 labelLarge =
                         TextStyle(
-                                fontFamily = FrauncesFontFamily, // Or a more utilitarian font if
+                                fontFamily = PromptFontFamily, // Or a more utilitarian font if
                                 // Fraunces is too decorative for labels
-                                fontWeight = FontWeight.Light,
-                                fontStyle = FontStyle.Italic,
+                                fontWeight = FontWeight.ExtraLight,
+                                // fontStyle = FontStyle.Italic,
                                 fontSize = 14.sp,
                                 lineHeight = 20.sp,
                                 letterSpacing = 0.1.sp
                         ),
                 labelMedium =
                         TextStyle(
-                                fontFamily = FrauncesFontFamily,
-                                fontWeight = FontWeight.Light,
-                                fontStyle = FontStyle.Italic,
+                                fontFamily = PromptFontFamily,
+                                fontWeight = FontWeight.ExtraLight,
+                                // fontStyle = FontStyle.Italic,
                                 fontSize = 12.sp,
                                 lineHeight = 16.sp,
                                 letterSpacing = 0.5.sp
                         ),
                 labelSmall =
                         TextStyle(
-                                fontFamily = FrauncesFontFamily,
-                                fontWeight = FontWeight.Light,
-                                fontStyle = FontStyle.Italic,
+                                fontFamily = PromptFontFamily,
+                                fontWeight = FontWeight.ExtraLight,
+                                // fontStyle = FontStyle.Italic,
                                 fontSize = 11.sp,
                                 lineHeight = 16.sp,
                                 letterSpacing = 0.5.sp

@@ -2,6 +2,8 @@ package studio.atopthehill.osom.data.db
 
 // import androidx.room.migration.Migration // Will be needed if not using fallback
 // import androidx.sqlite.db.SupportSQLiteDatabase // Will be needed if not using fallback
+// import studio.atopthehill.osom.data.db.dao.UsageCardDao // Removed
+// import studio.atopthehill.osom.data.db.entity.UsageCard // Removed
 import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
@@ -9,25 +11,23 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import studio.atopthehill.osom.data.db.dao.AppInfoDao
 import studio.atopthehill.osom.data.db.dao.AppUsageDao
-import studio.atopthehill.osom.data.db.dao.UsageCardDao
 import studio.atopthehill.osom.data.db.dao.UserStatsDao
 import studio.atopthehill.osom.data.db.entity.AppInfo
 import studio.atopthehill.osom.data.db.entity.AppUsage
-import studio.atopthehill.osom.data.db.entity.UsageCard
 import studio.atopthehill.osom.data.db.entity.UserStats
 
 @Database(
-        entities = [AppInfo::class, AppUsage::class, UsageCard::class, UserStats::class],
-        version = 2, // Incremented version
-        exportSchema = true // Recommended to set to true and manage schemas
+        entities = [AppInfo::class, AppUsage::class, UserStats::class], // Removed UsageCard
+        version = 4, // Incremented version due to schema change
+        exportSchema = true
 )
-@TypeConverters(Converters::class) // Added TypeConverters
-abstract class AppDatabase : RoomDatabase() { // Abstract class for the Room database
+@TypeConverters(Converters::class)
+abstract class AppDatabase : RoomDatabase() {
 
-    abstract fun appInfoDao(): AppInfoDao // Abstract method to get AppInfoDao
-    abstract fun appUsageDao(): AppUsageDao // Abstract method to get AppUsageDao
-    abstract fun usageCardDao(): UsageCardDao // Added DAO for UsageCard
-    abstract fun userStatsDao(): UserStatsDao // Added DAO for UserStats
+    abstract fun appInfoDao(): AppInfoDao
+    abstract fun appUsageDao(): AppUsageDao
+    // abstract fun usageCardDao(): UsageCardDao // Removed
+    abstract fun userStatsDao(): UserStatsDao
 
     companion object { // Companion object for singleton instance
         @Volatile // Ensures visibility of changes to other threads

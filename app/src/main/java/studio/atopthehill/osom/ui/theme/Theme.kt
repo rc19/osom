@@ -14,14 +14,14 @@ import androidx.core.view.WindowCompat
 
 private val EInkLightColorScheme =
         lightColorScheme(
-                primary = EInkAccent, // Primary actions, buttons
-                onPrimary = EInkBackground, // Text on primary actions
-                secondary = EInkTextSecondary, // Secondary elements, less prominent text
-                onSecondary = EInkBackground,
-                tertiary = EInkLineArt, // Borders, lines
+                primary = EInkBackground, // Primary actions, buttons
+                onPrimary = EInkTextPrimary, // Text on primary actions
+                secondary = EInkTextTertiary, // Secondary elements, less prominent text
+                onSecondary = EInkTextPrimary,
+                tertiary = EInkTextTertiary, // Borders, lines
                 onTertiary = EInkTextPrimary,
                 background = EInkBackground, // App background
-                onBackground = EInkTextPrimary, // Main text color on background
+                onBackground = EInkAccent, // Main text color on background
                 surface = EInkBackground, // Surfaces like cards
                 onSurface = EInkTextPrimary, // Text on surfaces
                 error = EInkError, // Standard error color, can be adapted
@@ -32,18 +32,18 @@ private val EInkLightColorScheme =
 // Example for a dark E-Ink theme, if we were to implement it fully
 private val EInkDarkColorScheme =
         darkColorScheme(
-                primary = EInkBackground, // Light text/icons on dark buttons
-                onPrimary = EInkAccent,
-                secondary = EInkLineArt,
-                onSecondary = EInkTextPrimary,
-                tertiary = EInkTextSecondary,
+                primary = EInkTextPrimary, // Light text/icons on dark buttons
+                onPrimary = EInkBackground,
+                secondary = EInkTextPrimary,
+                onSecondary = EInkBackground,
+                tertiary = EInkTextPrimary,
                 onTertiary = EInkBackground,
-                background = EInkAccent, // Dark background
+                background = EInkTextPrimary, // Dark background
                 onBackground = EInkBackground, // Light text on dark background
-                surface = EInkAccent, // Dark surfaces
+                surface = EInkTextPrimary, // Dark surfaces
                 onSurface = EInkBackground, // Light text on dark surfaces
-                error = Color(0xFFCF6679),
-                onError = Color.Black
+                error = EInkError,
+                onError = EInkTextSecondary
         )
 
 @Composable
