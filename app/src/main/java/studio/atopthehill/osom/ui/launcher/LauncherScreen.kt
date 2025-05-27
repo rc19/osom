@@ -42,13 +42,12 @@ import androidx.lifecycle.ViewModelProvider // For ViewModel Factory
 import androidx.lifecycle.compose.collectAsStateWithLifecycle // Collect StateFlow with lifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel // To get ViewModel instance
 import java.time.Duration // For formatting usage duration
+import kotlin.math.max
 import kotlinx.coroutines.delay
 import studio.atopthehill.osom.OsomApplication // Custom Application class
 import studio.atopthehill.osom.data.db.entity.AppInfo // AppInfo entity
-import studio.atopthehill.osom.data.db.entity.UserStats // Ensure this import is present and correct
+import studio.atopthehill.osom.data.db.entity.UsageCard
 import studio.atopthehill.osom.ui.theme.FrauncesFontFamily // Import FrauncesFontFamily
-import studio.atopthehill.osom.ui.theme.GaramondFontFamily
-import studio.atopthehill.osom.ui.theme.PromptFontFamily
 
 // Helper function to get Activity from Context, useful for things like ViewModelStoreOwner
 fun Context.getActivity(): Activity? =
@@ -87,22 +86,19 @@ fun LauncherScreen(
         val conversationState by launcherViewModel.conversationState.collectAsStateWithLifecycle()
         val inputMode by launcherViewModel.inputMode.collectAsStateWithLifecycle()
         val userStats by launcherViewModel.userStats.collectAsStateWithLifecycle()
+        val todaysUsageCardsFromVM by
+                launcherViewModel.todaysUsageCards.collectAsStateWithLifecycle()
 
         val focusManager = LocalFocusManager.current
         val lifecycleOwner = LocalLifecycleOwner.current
         val inputFocusRequester = remember { FocusRequester() }
-        val context = LocalContext.current
 
         LaunchedEffect(inputMode) {
                 delay(200) // Keep a small delay for UI to settle before focus
-                // Only request focus if the activity actually has window focus
-                val activity = context.getActivity()
-                if (activity?.hasWindowFocus() == true) {
-                        try {
-                                inputFocusRequester.requestFocus()
-                        } catch (e: Exception) {
-                                println("Focus request failed: ${e.message}")
-                        }
+                try {
+                        inputFocusRequester.requestFocus()
+                } catch (e: Exception) {
+                        println("Focus request failed: ${e.message}")
                 }
         }
 
@@ -124,7 +120,7 @@ fun LauncherScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
         ) {
                 // Top Section: Daily Usage Timeline
-                DailyUsageTimeline(userStats = userStats)
+                DailyUsageTimeline(cards = todaysUsageCardsFromVM)
 
                 Spacer(modifier = Modifier.height(16.dp)) // Space between timeline and chat text
 
@@ -149,17 +145,13 @@ fun LauncherScreen(
                                                         "Welcome ${stats.userName ?: "User"}, this is your ${interactionOrdinal}th interaction today.You've used your phone for $hours hrs $minutes mins.What do you wish to achieve?"
                                                 Text(
                                                         welcomeMsg,
-                                                        style =
-                                                                MaterialTheme.typography
-                                                                        .headlineMedium,
+                                                        style = MaterialTheme.typography.bodyLarge,
                                                         textAlign = TextAlign.Center
                                                 )
                                         }
                                                 ?: Text(
                                                         "Loading...",
-                                                        style =
-                                                                MaterialTheme.typography
-                                                                        .headlineMedium,
+                                                        style = MaterialTheme.typography.bodyLarge,
                                                         textAlign = TextAlign.Center
                                                 )
                                 }
@@ -169,46 +161,44 @@ fun LauncherScreen(
                                                 Text(
                                                         "Searching...",
                                                         modifier = Modifier.padding(top = 8.dp),
-                                                        style =
-                                                                MaterialTheme.typography
-                                                                        .headlineMedium
+                                                        style = MaterialTheme.typography.bodyLarge
                                                 )
                                         }
                                 }
                                 is ConversationState.AppFound ->
                                         Text(
                                                 currentConvState.askReasonMessage,
-                                                style = MaterialTheme.typography.headlineMedium,
+                                                style = MaterialTheme.typography.bodyLarge,
                                                 textAlign = TextAlign.Center
                                         )
                                 is ConversationState.AskDuration ->
                                         Text(
                                                 currentConvState.askDurationMessage,
-                                                style = MaterialTheme.typography.headlineMedium,
+                                                style = MaterialTheme.typography.bodyLarge,
                                                 textAlign = TextAlign.Center
                                         )
                                 is ConversationState.LaunchingApp ->
                                         Text(
                                                 currentConvState.message,
-                                                style = MaterialTheme.typography.headlineMedium,
+                                                style = MaterialTheme.typography.bodyLarge,
                                                 textAlign = TextAlign.Center
                                         )
                                 is ConversationState.AppNotFound ->
                                         Text(
-                                                "Couldn't find the app. Try a different name.",
-                                                style = MaterialTheme.typography.headlineMedium,
+                                                "App not found. Try a different name.",
+                                                style = MaterialTheme.typography.bodyLarge,
                                                 textAlign = TextAlign.Center
                                         )
                                 is ConversationState.MultipleAppsFound ->
                                         Text(
                                                 currentConvState.confirmationMessage,
-                                                style = MaterialTheme.typography.headlineMedium,
+                                                style = MaterialTheme.typography.bodyLarge,
                                                 textAlign = TextAlign.Center
                                         )
                                 is ConversationState.Error ->
                                         Text(
                                                 "Error: ${currentConvState.message}",
-                                                style = MaterialTheme.typography.headlineMedium,
+                                                style = MaterialTheme.typography.bodyLarge,
                                                 textAlign = TextAlign.Center,
                                                 color = MaterialTheme.colorScheme.error
                                         )
@@ -233,10 +223,12 @@ fun LauncherScreen(
                                 textStyle =
                                         LocalTextStyle.current.copy(
                                                 color = MaterialTheme.colorScheme.onSurface,
-                                                fontFamily = PromptFontFamily,
+                                                fontFamily = FrauncesFontFamily,
                                                 textAlign = TextAlign.Center,
                                                 fontSize =
-                                                        MaterialTheme.typography.bodyMedium.fontSize
+                                                        MaterialTheme.typography
+                                                                .titleMedium
+                                                                .fontSize
                                         ),
                                 keyboardOptions =
                                         KeyboardOptions.Default.copy(
@@ -286,13 +278,13 @@ fun LauncherScreen(
                                                                         when (inputMode) {
                                                                                 InputMode
                                                                                         .APP_SEARCH ->
-                                                                                        "Do Epic Stuff..."
+                                                                                        "Type app name..."
                                                                                 InputMode
                                                                                         .AWAITING_REASON ->
-                                                                                        "Purpose..."
+                                                                                        "Reason..."
                                                                                 InputMode
                                                                                         .AWAITING_DURATION ->
-                                                                                        "Duration in minutes..."
+                                                                                        "Duration (minutes)..."
                                                                         }
                                                                 Text(
                                                                         text = hintText,
@@ -309,14 +301,14 @@ fun LauncherScreen(
                                                                                                                                 0.6f
                                                                                                                 ),
                                                                                                 fontFamily =
-                                                                                                        PromptFontFamily,
+                                                                                                        FrauncesFontFamily,
                                                                                                 textAlign =
                                                                                                         TextAlign
                                                                                                                 .Center,
                                                                                                 fontSize =
                                                                                                         MaterialTheme
                                                                                                                 .typography
-                                                                                                                .bodyMedium
+                                                                                                                .titleMedium
                                                                                                                 .fontSize
                                                                                         )
                                                                 )
@@ -337,7 +329,7 @@ fun LauncherScreen(
 }
 
 @Composable
-fun DailyUsageTimeline(userStats: UserStats?) {
+fun DailyUsageTimeline(cards: List<UsageCard>) {
         val totalMinutesInDayFloat = 24 * 60f
 
         Row(
@@ -351,10 +343,7 @@ fun DailyUsageTimeline(userStats: UserStats?) {
                                 .padding(2.dp),
                 verticalAlignment = Alignment.CenterVertically
         ) {
-                val usageTodayDuration = userStats?.totalUsageToday ?: Duration.ZERO
-                val usedMinutes = usageTodayDuration.toMinutes().toFloat()
-
-                if (usedMinutes <= 0f) {
+                if (cards.isEmpty()) {
                         Spacer(
                                 modifier =
                                         Modifier.weight(1f)
@@ -364,31 +353,54 @@ fun DailyUsageTimeline(userStats: UserStats?) {
                         return@Row
                 }
 
-                // Calculate weight for the used portion
-                val usedSegmentWeight = (usedMinutes / totalMinutesInDayFloat).coerceIn(0.001f, 1f)
-                Box(
-                        modifier =
-                                Modifier.fillMaxHeight()
-                                        .weight(usedSegmentWeight)
-                                        .background(
-                                                MaterialTheme.colorScheme.primary.copy(
-                                                        alpha = 0.6f
-                                                ),
-                                                MaterialTheme.shapes.small
+                var accumulatedMinutes = 0f
+                cards.sortedBy { it.timestamp }.forEach { card ->
+                        val durationMinutes =
+                                (card.actualDuration
+                                                ?: Duration.ofMinutes(
+                                                        card.requestedDurationMinutes.toLong()
+                                                ))
+                                        .toMinutes()
+                                        .toFloat()
+                        if (durationMinutes > 0) {
+                                val segmentWeight =
+                                        (durationMinutes / totalMinutesInDayFloat).coerceAtLeast(
+                                                0.001f
                                         )
-                )
+                                Box(
+                                        modifier =
+                                                Modifier.fillMaxHeight()
+                                                        .weight(segmentWeight)
+                                                        .background(
+                                                                MaterialTheme.colorScheme.primary
+                                                                        .copy(alpha = 0.6f),
+                                                                MaterialTheme.shapes.small
+                                                        )
+                                )
+                                accumulatedMinutes += durationMinutes
+                                if (cards.last() != card) {
+                                        Spacer(
+                                                Modifier.width(1.dp)
+                                                        .fillMaxHeight()
+                                                        .background(
+                                                                MaterialTheme.colorScheme.background
+                                                                        .copy(alpha = 0.5f)
+                                                        )
+                                        )
+                                }
+                        }
+                }
 
-                // Calculate weight for the remaining portion
-                val remainingWeight = (1f - usedSegmentWeight).coerceAtLeast(0f)
-                if (remainingWeight > 0.001f
-                ) { // Only show spacer if it's meaningfully large to avoid tiny slivers
+                val remainingMinutes = max(0f, totalMinutesInDayFloat - accumulatedMinutes)
+                if (remainingMinutes > 0f) {
                         Spacer(
                                 modifier =
-                                        Modifier.weight(remainingWeight)
+                                        Modifier.weight(
+                                                        (remainingMinutes / totalMinutesInDayFloat)
+                                                                .coerceAtLeast(0.001f)
+                                                )
                                                 .fillMaxHeight()
-                                                .background(
-                                                        Color.Transparent
-                                                ) // Or a very faint background for unused portion
+                                                .background(Color.Transparent)
                         )
                 }
         }
@@ -458,7 +470,7 @@ fun MultipleAppsFoundDialog(
                         Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
                                         "Multiple apps found:",
-                                        style = MaterialTheme.typography.headlineMedium
+                                        style = MaterialTheme.typography.titleMedium
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
                                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -510,8 +522,8 @@ fun ConfirmAppSelectionDialog(
                                 Text(
                                         "Did you mean:",
                                         style =
-                                                MaterialTheme.typography.headlineMedium.copy(
-                                                        fontFamily = GaramondFontFamily
+                                                MaterialTheme.typography.titleMedium.copy(
+                                                        fontFamily = FrauncesFontFamily
                                                 )
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))

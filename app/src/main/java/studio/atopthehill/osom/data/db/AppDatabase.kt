@@ -2,32 +2,36 @@ package studio.atopthehill.osom.data.db
 
 // import androidx.room.migration.Migration // Will be needed if not using fallback
 // import androidx.sqlite.db.SupportSQLiteDatabase // Will be needed if not using fallback
-// import studio.atopthehill.osom.data.db.dao.UsageCardDao // Removed
-// import studio.atopthehill.osom.data.db.entity.UsageCard // Removed
+// AppUsageDao import will be removed by tool if not used
+// AppUsage entity import will be removed by tool if not used
 import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import studio.atopthehill.osom.data.db.dao.AppInfoDao
-import studio.atopthehill.osom.data.db.dao.AppUsageDao
+import studio.atopthehill.osom.data.db.dao.UsageCardDao
 import studio.atopthehill.osom.data.db.dao.UserStatsDao
 import studio.atopthehill.osom.data.db.entity.AppInfo
-import studio.atopthehill.osom.data.db.entity.AppUsage
+import studio.atopthehill.osom.data.db.entity.UsageCard
 import studio.atopthehill.osom.data.db.entity.UserStats
 
 @Database(
-        entities = [AppInfo::class, AppUsage::class, UserStats::class], // Removed UsageCard
-        version = 4, // Incremented version due to schema change
-        exportSchema = true
+        entities =
+                [
+                        AppInfo::class, /*AppUsage::class,*/
+                        UsageCard::class,
+                        UserStats::class], // AppUsage removed
+        version = 3, // Incremented version from 2 to 3
+        exportSchema = true // Recommended to set to true and manage schemas
 )
-@TypeConverters(Converters::class)
-abstract class AppDatabase : RoomDatabase() {
+@TypeConverters(Converters::class) // Added TypeConverters
+abstract class AppDatabase : RoomDatabase() { // Abstract class for the Room database
 
-    abstract fun appInfoDao(): AppInfoDao
-    abstract fun appUsageDao(): AppUsageDao
-    // abstract fun usageCardDao(): UsageCardDao // Removed
-    abstract fun userStatsDao(): UserStatsDao
+    abstract fun appInfoDao(): AppInfoDao // Abstract method to get AppInfoDao
+    // abstract fun appUsageDao(): AppUsageDao // Abstract method to get AppUsageDao - REMOVED
+    abstract fun usageCardDao(): UsageCardDao // Added DAO for UsageCard
+    abstract fun userStatsDao(): UserStatsDao // Added DAO for UserStats
 
     companion object { // Companion object for singleton instance
         @Volatile // Ensures visibility of changes to other threads
@@ -53,21 +57,21 @@ abstract class AppDatabase : RoomDatabase() {
 
         fun getDatabase(context: Context): AppDatabase { // Function to get the database instance
             return INSTANCE
-                    ?: synchronized(this) { // Synchronized block to ensure thread safety
+                    ?: synchronized(this) { // Singleton pattern with thread safety
                         val instance =
-                                Room.databaseBuilder( // Build the database instance
+                                Room.databaseBuilder(
                                                 context.applicationContext,
                                                 AppDatabase::class.java,
-                                                "osom_launcher_database" // Name of the database
-                                                // file
-                                                )
-                                        .fallbackToDestructiveMigration() // Added for simplicity
-                                        // during dev
-                                        // .addMigrations(MIGRATION_1_2) // Use this if providing
-                                        // specific migrations
+                                                "osom_database" // Name of the database file
+                                        )
+                                        // .addMigrations(MIGRATION_1_2) // Add migrations if not
+                                        // using fallback
+                                        .fallbackToDestructiveMigration() // Destroys and recreates
+                                        // if no migration found -
+                                        // USE WITH CAUTION
                                         .build()
-                        INSTANCE = instance // Assign the built instance
-                        instance // Return the instance
+                        INSTANCE = instance
+                        instance
                     }
         }
     }
