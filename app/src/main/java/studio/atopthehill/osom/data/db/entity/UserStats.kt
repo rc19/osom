@@ -7,9 +7,11 @@ import java.time.LocalDateTime
 
 @Entity(tableName = "user_stats")
 data class UserStats(
-        @PrimaryKey val id: Int = 1, // Singleton for user stats
-        var dailyInteractions: Int,
-        var totalUsageToday: Duration,
-        var lastInteraction: LocalDateTime,
-        var userName: String? = null // Added optional userName
+        @PrimaryKey(autoGenerate = false) // Set to false if we only have one row for user stats
+        val id: Int = 1, // Default ID for the single user stats row
+        val dailyInteractions: Int,
+        val totalUsageToday: Duration,
+        val lastInteraction: LocalDateTime,
+        val userName: String?,
+        val dayStartTimeHour: Int = 3 // Hour of the day (0-23) when the 'day' officially starts
 )

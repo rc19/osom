@@ -12,8 +12,13 @@ data class UsageCard(
         val appName: String,
         val packageName: String, // Added packageName to uniquely identify the app
         val openTime: LocalTime,
-        val requestedDurationMinutes: Int, // Storing the user's requested duration in minutes
-        var actualDuration: Duration?, // To be filled when the app is closed or time expires
+        val requestedDurationMinutes: Int?, // Nullable: Duration requested by user in minutes
+        var actualDuration: Duration? =
+                null, // Actual duration used, null if still active or not set
         val reason: String,
-        val timestamp: LocalDateTime // Timestamp of when the card was created/app launched
+        val timestamp: LocalDateTime, // Timestamp of when this card was created/event occurred
+        var timerStartTime: Long? = null, // System.currentTimeMillis when timer actually started
+        var isTimerFinishedGracefully: Boolean? =
+                null // True if timer finished, false if cancelled by user returning, null if not
+// set
 )

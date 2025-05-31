@@ -1,0 +1,15 @@
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/osom_accessibility_service_description"
+    android:accessibilityEventTypes="typeAllMask"
+    android:accessibilityFeedbackType="feedbackVisual"
+    android:notificationTimeout="100"
+    android:canRetrieveWindowContent="true"
+    android:canTakeScreenshot="true"
+    />
+    <!-- Add packageNames here if targeting specific apps by default e.g., android:packageNames="com.example.app1,com.example.app2" -->
+    <!-- For more advanced capabilities, you might add:
+         android:canPerformGestures="true"
+         android:canRequestFilterKeyEvents="true"
+         android:canRequestTouchExplorationMode="true"
+         android:settingsActivity="studio.atopthehill.osom.YourSettingsActivity" />
+    --> 

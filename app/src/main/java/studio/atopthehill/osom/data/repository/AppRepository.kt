@@ -179,14 +179,28 @@ class AppRepository(
                                                 dailyInteractions = 0,
                                                 totalUsageToday = Duration.ZERO,
                                                 lastInteraction = LocalDateTime.now(),
-                                                userName = "Ketan" // Set default username
+                                                userName = "Ketan", // Set default username
+                                                dayStartTimeHour = 3 // Default start hour
                                         )
                                 userStatsDao.insertOrUpdateStats(defaultStats)
                         }
                 }
         }
 
+        suspend fun addDurationToTotalUsage(duration: Duration) {
+                withContext(Dispatchers.IO) {
+                        val currentStats = userStatsDao.getUserStatsDirect()
+                        if (currentStats != null) {
+                                val newTotalUsage = currentStats.totalUsageToday.plus(duration)
+                                userStatsDao.insertOrUpdateStats(
+                                        currentStats.copy(totalUsageToday = newTotalUsage)
+                                )
+                        }
+                }
+        }
+
         // --- Package Usage Stats Logging ---
+        /* Commenting out as this is being consolidated into utils.UsageStatsLogger
         @Suppress("SimpleDateFormat") // Using for specific log format
         suspend fun logRecentUsageEvents() {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
@@ -283,6 +297,7 @@ class AppRepository(
                         Log.w(TAG, "UsageStatsManager not available on this API level.")
                 }
         }
+        */
 
         // --- Usage Card Backfilling ---
         @Suppress("SimpleDateFormat")
@@ -296,6 +311,20 @@ class AppRepository(
                 }
 
                 withContext(Dispatchers.IO) {
+                        // Check if usage cards already exist for this day
+                        val dateString =
+                                day.toLocalDate()
+                                        .format(java.time.format.DateTimeFormatter.ISO_LOCAL_DATE)
+                        val existingCardsForDay =
+                                usageCardDao.getUsageCardsForDay(dateString).firstOrNull()
+                        if (!existingCardsForDay.isNullOrEmpty()) {
+                                Log.d(
+                                        TAG,
+                                        "[Backfill] UsageCards already exist for ${day.toLocalDate()}. Skipping backfill."
+                                )
+                                return@withContext
+                        }
+
                         val usageStatsManager =
                                 context.getSystemService(Context.USAGE_STATS_SERVICE) as
                                         UsageStatsManager
@@ -439,6 +468,16 @@ class AppRepository(
                         return
                 }
 
+                // Check if the app is in our known installed apps list
+                val knownAppInfo = appInfoDao.getAppByPackageName(packageName)
+                if (knownAppInfo == null || !knownAppInfo.isInstalled) {
+                        Log.d(
+                                TAG,
+                                "[Backfill] Skipping session for $packageName as it's not a known installed app."
+                        )
+                        return
+                }
+
                 // Check for nearby processed sessions to avoid duplicates from rapid resume/pause
                 val toleranceMillis =
                         2L * 60L * 1000L // 2 minutes tolerance window, explicitly Long
@@ -468,13 +507,12 @@ class AppRepository(
                 if (existingCards != null && existingCards.isNotEmpty()) {
                         Log.d(
                                 TAG,
-                                "[Backfill] Existing OSOM-tracked card found for $packageName around ${Date(sessionStartTimeMillis)}. Skipping backfill."
+                                "[Backfill] Existing card found for $packageName around ${Date(sessionStartTimeMillis)}. Skipping backfill."
                         )
                         return
                 }
 
                 val actualDuration = Duration.ofMillis(durationMillis)
-                val requestedMinutes = actualDuration.toMinutes().toInt().coerceAtLeast(1)
                 val sessionStartDateTime =
                         LocalDateTime.ofInstant(
                                 java.time.Instant.ofEpochMilli(sessionStartTimeMillis),
@@ -486,7 +524,7 @@ class AppRepository(
                                 appName = appLabel,
                                 packageName = packageName,
                                 openTime = sessionStartDateTime.toLocalTime(),
-                                requestedDurationMinutes = requestedMinutes,
+                                requestedDurationMinutes = null,
                                 actualDuration = actualDuration,
                                 reason = "System-detected usage",
                                 timestamp = sessionStartDateTime

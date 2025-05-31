@@ -11,9 +11,11 @@ import java.time.LocalDateTime // For UserStats
 import java.time.LocalTime // For UsageCard openTime
 import kotlinx.coroutines.Dispatchers // Coroutine dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow // Mutable state flow for UI state
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow // Immutable state flow for exposing UI state
 import kotlinx.coroutines.flow.asStateFlow // Extension to convert mutable to immutable state flow
 import kotlinx.coroutines.flow.firstOrNull // Get first element or null
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch // Coroutine builder
 import studio.atopthehill.osom.OsomApplication // Custom Application class
 import studio.atopthehill.osom.data.db.entity.AppInfo // AppInfo entity
@@ -21,6 +23,7 @@ import studio.atopthehill.osom.data.db.entity.UsageCard // For creating UsageCar
 import studio.atopthehill.osom.data.db.entity.UserStats // For updating UserStats
 import studio.atopthehill.osom.data.repository.AppRepository // AppRepository for data operations
 import studio.atopthehill.osom.services.AppTimerService // Added import for AppTimerService
+import studio.atopthehill.osom.ui.navigation.Screen // For navigation
 
 // Enum to define the current mode of the input field
 enum class InputMode {
@@ -80,6 +83,22 @@ class LauncherViewModel(application: Application) :
     private val _todaysUsageCards = MutableStateFlow<List<UsageCard>>(emptyList())
     val todaysUsageCards: StateFlow<List<UsageCard>> = _todaysUsageCards.asStateFlow()
 
+    // --- Navigation State ---
+    private val _navigateToRoute = MutableStateFlow<String?>(null)
+    val navigateToRoute: StateFlow<String?> = _navigateToRoute.asStateFlow()
+
+    // --- All Usage Cards for Summary Screen ---
+    private val _allUsageCards = MutableStateFlow<List<UsageCard>>(emptyList())
+    val allUsageCards: StateFlow<List<UsageCard>> = _allUsageCards.asStateFlow()
+
+    // --- All Installed Apps for AppList Screen ---
+    val allInstalledApps: StateFlow<List<AppInfo>> =
+            appRepository.allInstalledApps.stateIn(
+                    scope = viewModelScope,
+                    started = SharingStarted.WhileSubscribed(5000),
+                    initialValue = emptyList()
+            )
+
     private var hasRefreshedOnce = false // Flag to prevent infinite refresh loop
 
     init { // Initialization block
@@ -102,12 +121,11 @@ class LauncherViewModel(application: Application) :
             hasRefreshedOnce = true
         }
         viewModelScope.launch {
-            // Log recent package usage stats on ViewModel initialization
-            appRepository.logRecentUsageEvents()
             // Attempt to backfill usage cards from system stats for today
             appRepository.backfillUsageCardsFromUsageStats(LocalDateTime.now())
         }
         resetLauncherState(showWelcome = true) // Initialize with welcome message
+        loadAllUsageCards() // Load cards for summary screen initially
     }
 
     private fun checkDateAndResetStatsIfNeeded(currentUserStats: UserStats?) {
@@ -139,6 +157,18 @@ class LauncherViewModel(application: Application) :
 
     fun submitInput() {
         val currentInput = _inputText.value.trim()
+
+        if (currentInput.equals("summary", ignoreCase = true)) {
+            _navigateToRoute.value = Screen.Summary.route
+            _inputText.value = "" // Clear input
+            return
+        }
+        if (currentInput.equals("applist", ignoreCase = true)) {
+            _navigateToRoute.value = Screen.AppList.route
+            _inputText.value = "" // Clear input
+            return
+        }
+
         when (_inputMode.value) {
             InputMode.APP_SEARCH -> searchForApp(currentInput)
             InputMode.AWAITING_REASON -> {
@@ -366,6 +396,9 @@ class LauncherViewModel(application: Application) :
         _appAwaitingReasonOrDuration.value = null
         _collectedReason.value = null
         hasRefreshedOnce = false
+        // _navigateToRoute.value = null // Clear navigation trigger on reset (handled by screen
+        // after nav)
+
         if (showWelcome) {
             val userName = _userStats.value?.userName ?: "User"
             val interactions = _userStats.value?.dailyInteractions ?: 0
@@ -394,6 +427,19 @@ class LauncherViewModel(application: Application) :
         viewModelScope.launch {
             appRepository.getUsageCardsForDay(LocalDateTime.now()).collect { cards ->
                 _todaysUsageCards.value = cards.sortedByDescending { it.timestamp }
+            }
+        }
+    }
+
+    fun onNavigationComplete() { // Call this from UI after navigation has occurred
+        _navigateToRoute.value = null
+    }
+
+    fun loadAllUsageCards() {
+        viewModelScope.launch {
+            appRepository.getAllUsageCards().collect { cards
+                -> // Assuming getAllUsageCards() returns Flow<List<UsageCard>>
+                _allUsageCards.value = cards.sortedByDescending { it.timestamp } // Keep sorted
             }
         }
     }

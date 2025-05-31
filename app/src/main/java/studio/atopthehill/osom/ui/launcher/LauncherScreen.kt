@@ -3,17 +3,22 @@ package studio.atopthehill.osom.ui.launcher // Package for launcher specific UI 
 // found
 // awareness
 // slideOutVertically, AnimatedVisibility, AnimatedContent
+// missing)
 import android.app.Activity // For context casting
 import android.app.Application // For ViewModel Factory
 import android.content.Context // For context
 import android.content.ContextWrapper // For context traversal
 import androidx.compose.animation.* // Imports fadeIn, fadeOut, slideInVertically,
+import androidx.compose.foundation.BorderStroke // Added for border
 import androidx.compose.foundation.ExperimentalFoundationApi // Required for animateItemPlacement
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border // Added for border modifier
 import androidx.compose.foundation.clickable // Clickable modifier
 import androidx.compose.foundation.layout.* // Layout components (Column, Row, Spacer, etc.)
+import androidx.compose.foundation.layout.imePadding // Added for TextField
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items // For LazyColumn items
+import androidx.compose.foundation.shape.CircleShape // Added for TextField border
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions // Keyboard actions for TextField
 import androidx.compose.foundation.text.KeyboardOptions // Keyboard options for TextField
@@ -24,6 +29,7 @@ import androidx.compose.runtime.* // Composable, remember, State, etc.
 import androidx.compose.ui.Alignment // Alignment modifiers
 import androidx.compose.ui.Modifier // Modifier for UI elements
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.shadow // Added for TextField shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color // Import for Color.Transparent
@@ -41,13 +47,19 @@ import androidx.lifecycle.Lifecycle // For lifecycle events
 import androidx.lifecycle.ViewModelProvider // For ViewModel Factory
 import androidx.lifecycle.compose.collectAsStateWithLifecycle // Collect StateFlow with lifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel // To get ViewModel instance
+import androidx.navigation.NavController
 import java.time.Duration // For formatting usage duration
-import kotlin.math.max
+import java.time.LocalDateTime // Added for DailyUsageTimeline
 import kotlinx.coroutines.delay
 import studio.atopthehill.osom.OsomApplication // Custom Application class
 import studio.atopthehill.osom.data.db.entity.AppInfo // AppInfo entity
 import studio.atopthehill.osom.data.db.entity.UsageCard
-import studio.atopthehill.osom.ui.theme.FrauncesFontFamily // Import FrauncesFontFamily
+import studio.atopthehill.osom.data.db.entity.UserStats // Added for DailyUsageTimeline
+import studio.atopthehill.osom.ui.theme.EInkAccent // Added for DailyUsageTimeline
+import studio.atopthehill.osom.ui.theme.EInkBackground // Added for TextField
+import studio.atopthehill.osom.ui.theme.EInkLineArt // For TextField border
+import studio.atopthehill.osom.ui.theme.EInkTextPrimary // Added for DailyUsageTimeline
+import studio.atopthehill.osom.ui.theme.PromptFontFamily
 
 // Helper function to get Activity from Context, useful for things like ViewModelStoreOwner
 fun Context.getActivity(): Activity? =
@@ -74,6 +86,7 @@ class LauncherViewModelFactory(private val application: Application) : ViewModel
 )
 @Composable
 fun LauncherScreen(
+        navController: NavController,
         launcherViewModel: LauncherViewModel =
                 viewModel(
                         factory =
@@ -88,18 +101,35 @@ fun LauncherScreen(
         val userStats by launcherViewModel.userStats.collectAsStateWithLifecycle()
         val todaysUsageCardsFromVM by
                 launcherViewModel.todaysUsageCards.collectAsStateWithLifecycle()
+        val navigateToRoute by launcherViewModel.navigateToRoute.collectAsStateWithLifecycle()
 
         val focusManager = LocalFocusManager.current
         val lifecycleOwner = LocalLifecycleOwner.current
         val inputFocusRequester = remember { FocusRequester() }
 
-        LaunchedEffect(inputMode) {
-                delay(200) // Keep a small delay for UI to settle before focus
-                try {
-                        inputFocusRequester.requestFocus()
-                } catch (e: Exception) {
-                        println("Focus request failed: ${e.message}")
+        // Determine screen content using the helper function
+        val screenContent = determineScreenContent(conversationState, inputMode, userStats)
+
+        LaunchedEffect(navigateToRoute) {
+                navigateToRoute?.let { route ->
+                        navController.navigate(route)
+                        launcherViewModel.onNavigationComplete()
                 }
+        }
+
+        LaunchedEffect(inputMode) {
+                if (inputMode == InputMode.AWAITING_REASON ||
+                                inputMode == InputMode.AWAITING_DURATION
+                ) {
+                        delay(200) // Keep a small delay for UI to settle before focus
+                        try {
+                                inputFocusRequester.requestFocus()
+                        } catch (e: Exception) {
+                                println("Focus request failed: ${e.message}")
+                        }
+                }
+                // Removed explicit focus request for InputMode.APP_SEARCH
+                // User tap will naturally focus the field in this mode.
         }
 
         DisposableEffect(lifecycleOwner) {
@@ -116,11 +146,16 @@ fun LauncherScreen(
         Column(
                 modifier =
                         Modifier.fillMaxSize()
-                                .padding(horizontal = 16.dp, vertical = 16.dp), // Overall padding
+                                .padding(
+                                        start = 16.dp,
+                                        top = 40.dp,
+                                        end = 16.dp,
+                                        bottom = 40.dp
+                                ), // Overall padding
                 horizontalAlignment = Alignment.CenterHorizontally
         ) {
                 // Top Section: Daily Usage Timeline
-                DailyUsageTimeline(cards = todaysUsageCardsFromVM)
+                DailyUsageTimeline(userStats, todaysUsageCardsFromVM)
 
                 Spacer(modifier = Modifier.height(16.dp)) // Space between timeline and chat text
 
@@ -132,76 +167,25 @@ fun LauncherScreen(
                         contentAlignment = Alignment.Center
                 ) {
                         // Display chat messages directly without AnimatedContent for simplicity
-                        when (val currentConvState = conversationState
-                        ) { // Use a stable val for when
-                                is ConversationState.Idle -> {
-                                        userStats?.let { stats ->
-                                                val interactions = stats.dailyInteractions
-                                                val interactionOrdinal = interactions + 1
-                                                val usageDuration = stats.totalUsageToday
-                                                val hours = usageDuration.toHours()
-                                                val minutes = usageDuration.toMinutes() % 60
-                                                val welcomeMsg =
-                                                        "Welcome ${stats.userName ?: "User"}, this is your ${interactionOrdinal}th interaction today.You've used your phone for $hours hrs $minutes mins.What do you wish to achieve?"
-                                                Text(
-                                                        welcomeMsg,
-                                                        style = MaterialTheme.typography.bodyLarge,
-                                                        textAlign = TextAlign.Center
-                                                )
-                                        }
-                                                ?: Text(
-                                                        "Loading...",
-                                                        style = MaterialTheme.typography.bodyLarge,
-                                                        textAlign = TextAlign.Center
-                                                )
+                        if (conversationState is ConversationState.Searching) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        CircularProgressIndicator()
+                                        Text(
+                                                screenContent.centerText,
+                                                modifier = Modifier.padding(top = 8.dp),
+                                                style = MaterialTheme.typography.headlineMedium
+                                        )
                                 }
-                                is ConversationState.Searching -> {
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                                CircularProgressIndicator()
-                                                Text(
-                                                        "Searching...",
-                                                        modifier = Modifier.padding(top = 8.dp),
-                                                        style = MaterialTheme.typography.bodyLarge
-                                                )
-                                        }
-                                }
-                                is ConversationState.AppFound ->
-                                        Text(
-                                                currentConvState.askReasonMessage,
-                                                style = MaterialTheme.typography.bodyLarge,
-                                                textAlign = TextAlign.Center
-                                        )
-                                is ConversationState.AskDuration ->
-                                        Text(
-                                                currentConvState.askDurationMessage,
-                                                style = MaterialTheme.typography.bodyLarge,
-                                                textAlign = TextAlign.Center
-                                        )
-                                is ConversationState.LaunchingApp ->
-                                        Text(
-                                                currentConvState.message,
-                                                style = MaterialTheme.typography.bodyLarge,
-                                                textAlign = TextAlign.Center
-                                        )
-                                is ConversationState.AppNotFound ->
-                                        Text(
-                                                "App not found. Try a different name.",
-                                                style = MaterialTheme.typography.bodyLarge,
-                                                textAlign = TextAlign.Center
-                                        )
-                                is ConversationState.MultipleAppsFound ->
-                                        Text(
-                                                currentConvState.confirmationMessage,
-                                                style = MaterialTheme.typography.bodyLarge,
-                                                textAlign = TextAlign.Center
-                                        )
-                                is ConversationState.Error ->
-                                        Text(
-                                                "Error: ${currentConvState.message}",
-                                                style = MaterialTheme.typography.bodyLarge,
-                                                textAlign = TextAlign.Center,
-                                                color = MaterialTheme.colorScheme.error
-                                        )
+                        } else {
+                                Text(
+                                        screenContent.centerText,
+                                        style = MaterialTheme.typography.headlineMedium,
+                                        textAlign = TextAlign.Center,
+                                        color =
+                                                if (conversationState is ConversationState.Error)
+                                                        MaterialTheme.colorScheme.error
+                                                else LocalContentColor.current
+                                )
                         }
                 }
 
@@ -214,21 +198,34 @@ fun LauncherScreen(
                                         .padding(
                                                 horizontal = 8.dp
                                         ) // Padding for the input area itself
+                                        .imePadding() // Added IME padding
                 ) {
                         BasicTextField(
                                 value = inputText,
                                 onValueChange = { launcherViewModel.onInputTextChanged(it) },
                                 modifier =
-                                        Modifier.fillMaxWidth().focusRequester(inputFocusRequester),
+                                        Modifier.fillMaxWidth()
+                                                .shadow(elevation = 2.dp, shape = CircleShape)
+                                                .border(
+                                                        BorderStroke(1.dp, EInkLineArt),
+                                                        CircleShape
+                                                )
+                                                .background(EInkBackground, CircleShape)
+                                                .padding(horizontal = 16.dp, vertical = 12.dp)
+                                                .focusRequester(inputFocusRequester),
                                 textStyle =
                                         LocalTextStyle.current.copy(
-                                                color = MaterialTheme.colorScheme.onSurface,
-                                                fontFamily = FrauncesFontFamily,
+                                                color =
+                                                        MaterialTheme.colorScheme
+                                                                .onSurface, // Will be
+                                                // EInkTextPrimary from
+                                                // theme
+                                                fontFamily = PromptFontFamily,
                                                 textAlign = TextAlign.Center,
                                                 fontSize =
                                                         MaterialTheme.typography
-                                                                .titleMedium
-                                                                .fontSize
+                                                                .bodyLarge
+                                                                .fontSize // Changed to bodyLarge
                                         ),
                                 keyboardOptions =
                                         KeyboardOptions.Default.copy(
@@ -265,62 +262,39 @@ fun LauncherScreen(
                                         ),
                                 singleLine = true,
                                 cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                                decorationBox = { innerTextField ->
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                                Box(
-                                                        modifier =
-                                                                Modifier.fillMaxWidth()
-                                                                        .padding(vertical = 12.dp),
-                                                        contentAlignment = Alignment.Center
-                                                ) {
-                                                        if (inputText.isEmpty()) {
-                                                                val hintText =
-                                                                        when (inputMode) {
-                                                                                InputMode
-                                                                                        .APP_SEARCH ->
-                                                                                        "Type app name..."
-                                                                                InputMode
-                                                                                        .AWAITING_REASON ->
-                                                                                        "Reason..."
-                                                                                InputMode
-                                                                                        .AWAITING_DURATION ->
-                                                                                        "Duration (minutes)..."
-                                                                        }
-                                                                Text(
-                                                                        text = hintText,
-                                                                        style =
-                                                                                LocalTextStyle
-                                                                                        .current
-                                                                                        .copy(
-                                                                                                color =
-                                                                                                        MaterialTheme
-                                                                                                                .colorScheme
-                                                                                                                .onSurface
-                                                                                                                .copy(
-                                                                                                                        alpha =
-                                                                                                                                0.6f
-                                                                                                                ),
-                                                                                                fontFamily =
-                                                                                                        FrauncesFontFamily,
-                                                                                                textAlign =
-                                                                                                        TextAlign
-                                                                                                                .Center,
-                                                                                                fontSize =
-                                                                                                        MaterialTheme
-                                                                                                                .typography
-                                                                                                                .titleMedium
-                                                                                                                .fontSize
-                                                                                        )
-                                                                )
-                                                        }
-                                                        innerTextField()
+                                decorationBox = { innerTextField
+                                        -> // Simplified decorationBox for hint
+                                        Box(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                contentAlignment = Alignment.Center
+                                        ) {
+                                                if (inputText.isEmpty()) {
+                                                        Text(
+                                                                text = screenContent.inputHintText,
+                                                                style =
+                                                                        LocalTextStyle.current.copy(
+                                                                                color =
+                                                                                        MaterialTheme
+                                                                                                .colorScheme
+                                                                                                .onSurface
+                                                                                                .copy(
+                                                                                                        alpha =
+                                                                                                                0.6f
+                                                                                                ),
+                                                                                fontFamily =
+                                                                                        PromptFontFamily,
+                                                                                textAlign =
+                                                                                        TextAlign
+                                                                                                .Center,
+                                                                                fontSize =
+                                                                                        MaterialTheme
+                                                                                                .typography
+                                                                                                .bodyLarge
+                                                                                                .fontSize // Consistent hint size
+                                                                        )
+                                                        )
                                                 }
-                                                Divider(
-                                                        color =
-                                                                MaterialTheme.colorScheme.onSurface
-                                                                        .copy(alpha = 0.4f),
-                                                        thickness = 1.dp
-                                                )
+                                                innerTextField()
                                         }
                                 }
                         )
@@ -329,79 +303,128 @@ fun LauncherScreen(
 }
 
 @Composable
-fun DailyUsageTimeline(cards: List<UsageCard>) {
-        val totalMinutesInDayFloat = 24 * 60f
+fun DailyUsageTimeline(userStats: UserStats?, cards: List<UsageCard>) {
+        val dayStartHour = userStats?.dayStartTimeHour ?: 3
+        val now = LocalDateTime.now()
 
-        Row(
+        // Determine the current day's period based on dayStartHour
+        val todayStartDateTime = now.toLocalDate().atTime(dayStartHour, 0)
+        val periodStartDateTime =
+                if (now.hour < dayStartHour) {
+                        todayStartDateTime.minusDays(1)
+                } else {
+                        todayStartDateTime
+                }
+        val periodEndDateTime = periodStartDateTime.plusHours(24)
+
+        val totalMinutesInPeriod = 24 * 60f
+
+        Box(
                 modifier =
                         Modifier.fillMaxWidth()
-                                .height(20.dp)
-                                .background(
-                                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.1f),
+                                .height(24.dp) // Increased height for better visibility and border
+                                .border(
+                                        BorderStroke(1.dp, EInkTextPrimary),
                                         MaterialTheme.shapes.small
                                 )
-                                .padding(2.dp),
-                verticalAlignment = Alignment.CenterVertically
+                                .padding(2.dp) // Padding inside the border
         ) {
-                if (cards.isEmpty()) {
-                        Spacer(
-                                modifier =
-                                        Modifier.weight(1f)
-                                                .fillMaxHeight()
-                                                .background(Color.Transparent)
-                        )
-                        return@Row
-                }
-
-                var accumulatedMinutes = 0f
-                cards.sortedBy { it.timestamp }.forEach { card ->
-                        val durationMinutes =
-                                (card.actualDuration
-                                                ?: Duration.ofMinutes(
-                                                        card.requestedDurationMinutes.toLong()
-                                                ))
-                                        .toMinutes()
-                                        .toFloat()
-                        if (durationMinutes > 0) {
-                                val segmentWeight =
-                                        (durationMinutes / totalMinutesInDayFloat).coerceAtLeast(
-                                                0.001f
-                                        )
-                                Box(
+                Row(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalAlignment = Alignment.CenterVertically
+                ) {
+                        if (cards.isEmpty()) {
+                                Spacer(
                                         modifier =
-                                                Modifier.fillMaxHeight()
-                                                        .weight(segmentWeight)
-                                                        .background(
-                                                                MaterialTheme.colorScheme.primary
-                                                                        .copy(alpha = 0.6f),
-                                                                MaterialTheme.shapes.small
-                                                        )
-                                )
-                                accumulatedMinutes += durationMinutes
-                                if (cards.last() != card) {
-                                        Spacer(
-                                                Modifier.width(1.dp)
+                                                Modifier.weight(1f)
                                                         .fillMaxHeight()
                                                         .background(
-                                                                MaterialTheme.colorScheme.background
-                                                                        .copy(alpha = 0.5f)
-                                                        )
+                                                                Color.Transparent
+                                                        ) // Background of the empty bar area
+                                )
+                                return@Row
+                        }
+
+                        val relevantCards =
+                                cards
+                                        .filter {
+                                                val cardDateTime = it.timestamp
+                                                !cardDateTime.isBefore(periodStartDateTime) &&
+                                                        cardDateTime.isBefore(periodEndDateTime)
+                                        }
+                                        .sortedBy { it.timestamp }
+
+                        var currentMinuteMarker = 0f
+
+                        relevantCards.forEach { card ->
+                                val cardStartDateTime = card.timestamp
+                                val cardStartOffsetMinutes =
+                                        Duration.between(periodStartDateTime, cardStartDateTime)
+                                                .toMinutes()
+                                                .toFloat()
+
+                                val durationToDraw =
+                                        card.actualDuration
+                                                ?: card.requestedDurationMinutes
+                                                        ?.takeIf { it > 0 }
+                                                        ?.let { Duration.ofMinutes(it.toLong()) }
+
+                                val durationMinutes = durationToDraw?.toMinutes()?.toFloat() ?: 0f
+
+                                // Space before this card's segment (if any)
+                                val spaceBeforeMinutes =
+                                        (cardStartOffsetMinutes - currentMinuteMarker)
+                                                .coerceAtLeast(0f)
+                                if (spaceBeforeMinutes > 0) {
+                                        val spaceWeight =
+                                                (spaceBeforeMinutes / totalMinutesInPeriod)
+                                                        .coerceAtLeast(0.0001f)
+                                        Spacer(
+                                                modifier =
+                                                        Modifier.fillMaxHeight()
+                                                                .weight(spaceWeight)
+                                                                .background(Color.Transparent)
                                         )
                                 }
-                        }
-                }
 
-                val remainingMinutes = max(0f, totalMinutesInDayFloat - accumulatedMinutes)
-                if (remainingMinutes > 0f) {
-                        Spacer(
-                                modifier =
-                                        Modifier.weight(
-                                                        (remainingMinutes / totalMinutesInDayFloat)
-                                                                .coerceAtLeast(0.001f)
-                                                )
-                                                .fillMaxHeight()
-                                                .background(Color.Transparent)
-                        )
+                                // This card's segment
+                                if (durationMinutes > 0) {
+                                        val segmentWeight =
+                                                (durationMinutes / totalMinutesInPeriod)
+                                                        .coerceAtLeast(0.001f)
+                                        Box(
+                                                modifier =
+                                                        Modifier.fillMaxHeight()
+                                                                .weight(segmentWeight)
+                                                                .background(
+                                                                        EInkAccent,
+                                                                        MaterialTheme.shapes.small
+                                                                )
+                                        )
+                                        currentMinuteMarker =
+                                                cardStartOffsetMinutes + durationMinutes
+                                } else {
+                                        currentMinuteMarker =
+                                                cardStartOffsetMinutes // No duration, just move
+                                        // marker
+                                }
+                        }
+
+                        // Remaining space at the end of the timeline
+                        val remainingMinutes =
+                                (totalMinutesInPeriod - currentMinuteMarker).coerceAtLeast(0f)
+                        if (remainingMinutes > 0f) {
+                                val remainingWeight =
+                                        (remainingMinutes / totalMinutesInPeriod).coerceAtLeast(
+                                                0.0001f
+                                        )
+                                Spacer(
+                                        modifier =
+                                                Modifier.weight(remainingWeight)
+                                                        .fillMaxHeight()
+                                                        .background(Color.Transparent)
+                                )
+                        }
                 }
         }
 }
@@ -470,7 +493,7 @@ fun MultipleAppsFoundDialog(
                         Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
                                         "Multiple apps found:",
-                                        style = MaterialTheme.typography.titleMedium
+                                        style = MaterialTheme.typography.headlineMedium
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
                                 LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -500,7 +523,7 @@ fun MultipleAppsFoundDialog(
 fun ErrorDialog(message: String, onDismiss: () -> Unit) {
         AlertDialog(
                 onDismissRequest = onDismiss,
-                title = { Text("Error", fontFamily = FrauncesFontFamily) },
+                title = { Text("Error", fontFamily = PromptFontFamily) },
                 text = { Text(message) },
                 confirmButton = { Button(onClick = onDismiss) { Text("OK") } }
         )
@@ -521,10 +544,7 @@ fun ConfirmAppSelectionDialog(
                         Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
                                         "Did you mean:",
-                                        style =
-                                                MaterialTheme.typography.titleMedium.copy(
-                                                        fontFamily = FrauncesFontFamily
-                                                )
+                                        style = MaterialTheme.typography.headlineMedium
                                 )
                                 Spacer(modifier = Modifier.height(16.dp))
                                 LazyColumn {

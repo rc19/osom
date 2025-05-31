@@ -23,8 +23,8 @@ android {
         release {
             isMinifyEnabled = false
             proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                    getDefaultProguardFile("proguard-android-optimize.txt"),
+                    "proguard-rules.pro"
             )
         }
     }
@@ -32,16 +32,11 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    kotlinOptions {
-        jvmTarget = "11"
-    }
-    buildFeatures {
-        compose = true
-    }
+    kotlinOptions { jvmTarget = "11" }
+    buildFeatures { compose = true }
 }
 
 dependencies {
-
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -70,6 +65,14 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core) // Or latest
     implementation(libs.kotlinx.coroutines.android) // Or latest
 
+    // Navigation
+    implementation(libs.androidx.navigation.compose)
+
+    // Coil for Icon Painter
+    implementation(libs.coil.compose)
+
+    // Add this for LocalBroadcastManager (deprecated, but needed for current approach)
+    implementation(libs.androidx.legacy.support.v4)
 
     // Test Implementations
     testImplementation(libs.junit)

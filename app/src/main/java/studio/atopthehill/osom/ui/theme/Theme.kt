@@ -49,6 +49,7 @@ private val EInkDarkColorScheme =
 @Composable
 fun OSOMTheme(
         darkTheme: Boolean = isSystemInDarkTheme(),
+
         // Dynamic color is available on Android 12+ but we'll override with E-Ink
         dynamicColor: Boolean = false, // Set to false to enforce our E-Ink theme
         content: @Composable () -> Unit

@@ -1,3 +1,8 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
 # OSOM Launcher v2 Rules and Specifications
 
 ## Core Functionality
@@ -78,8 +83,9 @@
 
 4. **Time Limit Response**
    ```
-   "Great - opening {app_name} for you to {reason} for {time} mins. 
-   Wait for a second and open the app."
+   Animate the card to the opened app list of cards at the top
+   "Great - opening {app_name} for you to {reason} for {time} mins."
+   Wait for a second and open the app.
    ```
 
 ## Technical Specifications
@@ -89,7 +95,7 @@
    - Primary Font: Fraunces (Regular and Italic)
    - Font Location: res/font/
    - Style: Old style serif
-   - E-ink reader aesthetic
+   - E-ink reader with warm backlight aesthetic
 
 2. **Animations**
    - Message fade: Left to right
@@ -106,7 +112,7 @@
 4. **Color Scheme**
    - Warm backlight
    - E-ink reader aesthetic
-   - High contrast for readability
+   - Low contrast for printed paper effect and soothing feel
    - Subtle shadows for depth
 
 ### State Management
@@ -123,7 +129,7 @@
    - Handle app launch and closure
 
 ### Data Models
-1. **Usage Card**
+1. **Suggested Usage Card**
    ```kotlin
    data class UsageCard(
        val appName: String,
@@ -134,7 +140,7 @@
    )
    ```
 
-2. **User Stats**
+2. **Suggested User Stats**
    ```kotlin
    data class UserStats(
        val dailyInteractions: Int,
@@ -200,7 +206,6 @@
    - Font rendering
    - Input field behavior
    - Card interactions
-
 3. **Performance Testing**
    - Animation performance
    - Memory usage

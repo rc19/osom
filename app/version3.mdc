@@ -1,0 +1,118 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Version 3: Enhanced Logging and Accessibility Service
+
+**Note:** The application theme is `OSOMTheme`.
+
+This version introduces a comprehensive logging service and integrates an Accessibility Service to provide real-time insights and an on-screen log display.
+
+## Logging Service
+
+We will build a robust logging service to capture the following:
+
+*   **Usage Stats:** Track application usage patterns.
+*   **Notifications:** Log incoming notifications.
+*   **Accessibility Screen Logs:** Capture relevant information from the screen content via the Accessibility Service.
+*   **Log Storage:** All collected logs (usage stats, notifications, accessibility events) generated during the period an app is open (from launch via our launcher until returning to the launcher) will be aggregated and stored in a `.txt` file on the device. This file should be accessible for manual retrieval.
+
+## Accessibility Service Integration and Log Overlay
+
+Upon launching the app, it will:
+
+1.  **Configure and Start Accessibility Service:** Programmatically configure and enable a custom Accessibility Service using Kotlin.
+2.  **Log Display Overlay:** Implement an overlay box that will appear on top of the currently running application. This overlay will display the logs collected by the logging service (usage stats, notifications, accessibility events).
+
+### `onServiceConnected` Implementation
+
+The following Kotlin code snippet shows the configuration within the `onServiceConnected` method of our Accessibility Service:
+
+```kotlin
+override fun onServiceConnected() {
+    val openedAppPackageName = "com.example.openedapp" // Placeholder for the actual opened app's package name
+    val info = AccessibilityServiceInfo() // Assuming info is initialized appropriately
+    info.apply {
+        // Set the type of events that this service wants to listen to.
+        eventTypes = AccessibilityEvent.TYPE_ALL_MASK
+
+        // Set the service to work with the currently opened app.
+        packageNames = arrayOf(openedAppPackageName)
+
+        // Set the type of feedback your service provides.
+        feedbackType = AccessibilityServiceInfo.FEEDBACK_VISUAL
+
+        // Set flags to enable desired capabilities.
+        // android:canTakeScreenshot and android:canRetrieveWindowContent are usually set in the XML config,
+        // but flags like FLAG_TAKE_SCREENSHOT are used for API calls.
+        // FLAG_RETRIEVE_INTERACTIVE_WINDOWS allows access to window content.
+        // FLAG_INPUT_METHOD_EDITOR is for services that act as input method editors.
+        flags = AccessibilityServiceInfo.FLAG_TAKE_SCREENSHOT or
+                AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS or
+                AccessibilityServiceInfo.FLAG_INPUT_METHOD_EDITOR
+        // Add other flags as needed, for example, for gesture control:
+        // flags = flags or AccessibilityServiceInfo.FLAG_REQUEST_TOUCH_EXPLORATION_MODE
+        // flags = flags or AccessibilityServiceInfo.FLAG_REQUEST_FILTER_KEY_EVENTS
+        // Ensure capabilities are also declared in the XML configuration (e.g., android:canRetrieveWindowContent="true")
+
+        notificationTimeout = 100
+
+        // To enable features like taking screenshots and performing touch events,
+        // ensure the service is properly configured and has the necessary permissions.
+        // The canTakeScreenshot capability is often set in the XML configuration.
+        // The canPerformGesture capability allows dispatching gestures.
+        // info.capabilities = info.capabilities or AccessibilityServiceInfo.CAPABILITY_CAN_TAKE_SCREENSHOT
+        // info.capabilities = info.capabilities or AccessibilityServiceInfo.CAPABILITY_CAN_PERFORM_GESTURES
+    }
+
+    this.serviceInfo = info
+}
+```
+
+*Note: `openedAppPackageName` should be dynamically set to the package name of the application the user has opened. The flags `FLAG_TAKE_SCREENSHOT`, `FLAG_RETRIEVE_INTERACTIVE_WINDOWS`, and `FLAG_INPUT_METHOD_EDITOR` have been added. For full functionality like taking screenshots and performing touch events, ensure the service's XML configuration (`accessibility_service_config.xml`) also declares these capabilities (e.g., `android:canTakeScreenshot="true"`, `android:canPerformGestures="true"`, `android:canRetrieveWindowContent="true"`). Additional flags or capabilities might be needed for specific touch event interactions.*
+
+## Android Manifest Permissions
+
+Remember to add the necessary permissions to the `AndroidManifest.xml` for the Accessibility Service and any other required functionalities (e.g., notification access if needed separately).
+
+Specifically, the `BIND_ACCESSIBILITY_SERVICE` permission is required for an Accessibility Service:
+
+```xml
+<uses-permission android:name="android.permission.BIND_ACCESSIBILITY_SERVICE" />
+<uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+<uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
+<uses-permission android:name="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" />
+```
+
+And the service declaration within the `<application>` tag:
+
+```xml
+<service
+    android:name=".YourAccessibilityServiceName"
+    android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+    android:exported="false"> // Set exported to true if it needs to be accessible by other apps, otherwise false.
+    <intent-filter>
+        <action android:name="android.accessibilityservice.AccessibilityService" />
+    </intent-filter>
+    <meta-data
+        android:name="android.accessibilityservice"
+        android:resource="@xml/accessibility_service_config" /> // Create this XML config file
+</service>
+```
+
+**Regarding Accessibility Service Configuration (XML vs. Kotlin):**
+
+The XML configuration file (e.g., `res/xml/accessibility_service_config.xml`) referenced in the `AndroidManifest.xml` is essential for the system to discover and initially set up your Accessibility Service. Programmatic configuration in Kotlin via `setServiceInfo()` within `onServiceConnected()` allows for dynamic adjustments to these settings at runtime. Both are typically used: XML for initial declaration and Kotlin for runtime modifications or more complex configurations.
+
+No UI flows to request these permissions need to be implemented at this stage.
+
+## Development and Linter Guidance
+
+*   **Linter Errors & IDE Discrepancies:** When working with code suggestions, particularly from AI assistants, be mindful of potential linter errors that might arise. Sometimes, the development environment (e.g., Cursor) may not be perfectly synchronized with the Android Studio project's build system and dependencies.
+*   **Dependency Management:** If import errors occur for classes or packages that are not standard Android/Kotlin libraries, please manually verify and add the necessary dependencies to your `build.gradle.kts` (or `build.gradle`) file in the relevant module (usually the `app` module).
+*   **Ignoring `.R` Import Errors:** Specifically, do not be concerned by linter errors related to `import studio.atopthehill.osom.R;` or `import studio.atopthehill.osom.databinding.SomeBinding;`. These are often flagged incorrectly by linters that are not fully aware of the Android build process which generates these classes. Android Studio typically resolves these correctly during a build. Focus on resolving other, more substantive errors.
+*   **Focus on User-Specified Issues:** The AI assistant should prioritize addressing issues explicitly mentioned by the user and avoid repeatedly flagging or "hallucinating" linter errors that the user has not raised as a concern, especially if they are likely related to the IDE/build environment differences mentioned above.
+
+*   **Ignoring `.R` Import Errors:** Specifically, do not be concerned by linter errors related to `import your.package.name.R;` or `import your.package.name.databinding.SomeBinding;`. These are often flagged incorrectly by linters that are not fully aware of the Android build process which generates these classes. Android Studio typically resolves these correctly during a build. Focus on resolving other, more substantive errors.
+*   **Focus on User-Specified Issues:** The AI assistant should prioritize addressing issues explicitly mentioned by the user and avoid repeatedly flagging or "hallucinating" linter errors that the user has not raised as a concern, especially if they are likely related to the IDE/build environment differences mentioned above.
