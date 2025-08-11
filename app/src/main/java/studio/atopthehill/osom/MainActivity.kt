@@ -11,6 +11,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -22,52 +25,62 @@ import androidx.navigation.compose.rememberNavController
 import studio.atopthehill.osom.ui.applist.AppListScreen
 import studio.atopthehill.osom.ui.launcher.LauncherScreen
 import studio.atopthehill.osom.ui.navigation.Screen
+import studio.atopthehill.osom.ui.permissions.PermissionScreen
 import studio.atopthehill.osom.ui.summary.SummaryScreen
 import studio.atopthehill.osom.ui.theme.OSOMTheme
+import studio.atopthehill.osom.utils.PermissionManager
 
 class MainActivity : ComponentActivity() {
+
+    private var permissionsGranted by mutableStateOf(false)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(
-                statusBarStyle =
-                        SystemBarStyle.light(
-                                scrim = Color.Transparent.toArgb(),
-                                darkScrim = Color.Transparent.toArgb()
-                        ),
-                navigationBarStyle =
-                        SystemBarStyle.light(
-                                scrim = Color.Transparent.toArgb(),
-                                darkScrim = Color.Transparent.toArgb()
-                        ),
+            statusBarStyle =
+            SystemBarStyle.light(
+                scrim = Color.Transparent.toArgb(),
+                darkScrim = Color.Transparent.toArgb()
+            ),
+            navigationBarStyle =
+            SystemBarStyle.light(
+                scrim = Color.Transparent.toArgb(),
+                darkScrim = Color.Transparent.toArgb()
+            ),
         )
         super.onCreate(savedInstanceState)
+
+        PermissionManager.checkAndRequestPermissions(this)
 
         setContent {
             OSOMTheme {
                 Surface(
-                        modifier = Modifier.fillMaxSize(),
-                        color = MaterialTheme.colorScheme.background
-                ) { OsomAppNavigation() }
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) { OsomAppNavigation(permissionsGranted) }
             }
         }
     }
 
     override fun onResume() {
         super.onResume()
-        // Trigger usage stats logging when the activity resumes - REMOVED
-        // UsageStatsLogger.logRecentUsageStats(this)
+        permissionsGranted = PermissionManager.hasUsageStatsPermission(this) &&
+                PermissionManager.hasAccessibilityPermission(this) &&
+                PermissionManager.hasOverlayPermission(this) &&
+                PermissionManager.hasNotificationListenerPermission(this)
     }
 }
 
 @Composable
-fun OsomAppNavigation() {
+fun OsomAppNavigation(permissionsGranted: Boolean) {
+    val context = LocalContext.current
     val navController = rememberNavController()
     val launcherViewModel: studio.atopthehill.osom.ui.launcher.LauncherViewModel =
-            androidx.lifecycle.viewmodel.compose.viewModel(
-                    factory =
-                            studio.atopthehill.osom.ui.launcher.LauncherViewModelFactory(
-                                    LocalContext.current.applicationContext as OsomApplication
-                            )
+        androidx.lifecycle.viewmodel.compose.viewModel(
+            factory =
+            studio.atopthehill.osom.ui.launcher.LauncherViewModelFactory(
+                LocalContext.current.applicationContext as OsomApplication
             )
+        )
     val navigateToRoute: String? by launcherViewModel.navigateToRoute.collectAsStateWithLifecycle()
 
     LaunchedEffect(navigateToRoute) {
@@ -77,7 +90,13 @@ fun OsomAppNavigation() {
         }
     }
 
-    NavHost(navController = navController, startDestination = Screen.Launcher.route) {
+    val startDestination = if (permissionsGranted) {
+        Screen.Launcher.route
+    } else {
+        Screen.Permissions.route
+    }
+
+    NavHost(navController = navController, startDestination = startDestination) {
         composable(Screen.Launcher.route) {
             LauncherScreen(navController = navController, launcherViewModel = launcherViewModel)
         }
@@ -86,6 +105,13 @@ fun OsomAppNavigation() {
         }
         composable(Screen.AppList.route) {
             AppListScreen(navController = navController, launcherViewModel = launcherViewModel)
+        }
+        composable(Screen.Permissions.route) {
+            PermissionScreen(onPermissionsGranted = {
+                navController.navigate(Screen.Launcher.route) {
+                    popUpTo(Screen.Permissions.route) { inclusive = true }
+                }
+            })
         }
     }
 }
