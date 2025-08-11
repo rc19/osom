@@ -1,4 +1,3 @@
-
 package studio.atopthehill.osom.ui.permissions
 
 import androidx.compose.foundation.layout.*
@@ -85,4 +84,3 @@ fun PermissionRequestUI(permissionName: String, description: String, onClick: ()
         }
     }
 }
-
