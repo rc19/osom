@@ -119,13 +119,12 @@ class LauncherViewModelFactory(private val application: Application) : ViewModel
 @Composable
 fun LauncherScreen(
     navController: NavController,
-    launcherViewModel: LauncherViewModel =
-        viewModel(
-            factory =
-            LauncherViewModelFactory(
-                LocalContext.current.applicationContext as OsomApplication
-            )
+    onOnboardingComplete: () -> Unit,
+    launcherViewModel: LauncherViewModel = viewModel(
+        factory = LauncherViewModelFactory(
+            LocalContext.current.applicationContext as OsomApplication
         )
+    )
 ) {
     val showOnboarding by launcherViewModel.showOnboarding.collectAsStateWithLifecycle()
     val navigateToRoute by launcherViewModel.navigateToRoute.collectAsStateWithLifecycle()
@@ -139,8 +138,7 @@ fun LauncherScreen(
 
     if (showOnboarding) {
         OnboardingCarousel(
-            onSkip = { launcherViewModel.onOnboardingComplete() },
-            onGrantPermission = { launcherViewModel.onOnboardingComplete() }
+            onOnboardingComplete = onOnboardingComplete
         )
     } else {
         MainLauncherContent(navController, launcherViewModel)
@@ -155,7 +153,7 @@ data class OnboardingPageData(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun OnboardingCarousel(onSkip: () -> Unit, onGrantPermission: () -> Unit) {
+fun OnboardingCarousel(onOnboardingComplete: () -> Unit) {
     val pages =
         listOf(
             OnboardingPageData(
@@ -187,7 +185,7 @@ fun OnboardingCarousel(onSkip: () -> Unit, onGrantPermission: () -> Unit) {
         verticalArrangement = Arrangement.SpaceBetween,
     ) {
         TextButton(
-            onClick = onSkip,
+            onClick = onOnboardingComplete,
             modifier = Modifier.align(Alignment.End),
         ) {
             Text("Skip")
@@ -225,12 +223,12 @@ fun OnboardingCarousel(onSkip: () -> Unit, onGrantPermission: () -> Unit) {
 
         if (pagerState.currentPage == pages.lastIndex) {
             Button(
-                onClick = onGrantPermission,
+                onClick = onOnboardingComplete,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 24.dp),
             ) {
-                Text("Grant Permission")
+                Text("Let's Go 🚀")
             }
         } else {
             // Keep the space for the button to avoid layout jumps

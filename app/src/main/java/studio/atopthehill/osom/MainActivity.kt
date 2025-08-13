@@ -31,8 +31,6 @@ import studio.atopthehill.osom.utils.PermissionManager
 
 class MainActivity : ComponentActivity() {
 
-    private var permissionsGranted by mutableStateOf(false)
-
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge(
             statusBarStyle =
@@ -53,45 +51,73 @@ class MainActivity : ComponentActivity() {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
-                ) { OsomApp(permissionsGranted) }
+                ) { OsomApp() }
             }
         }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        permissionsGranted = PermissionManager.hasUsageStatsPermission(this) &&
-                PermissionManager.hasAccessibilityPermission(this) &&
-                PermissionManager.hasOverlayPermission(this) &&
-                PermissionManager.hasNotificationListenerPermission(this)
     }
 }
 
 @Composable
-fun OsomApp(permissionsGranted: Boolean) {
+fun OsomApp() {
     val navController = rememberNavController()
+    val context = LocalContext.current
     val launcherViewModel: studio.atopthehill.osom.ui.launcher.LauncherViewModel = viewModel(
         factory = studio.atopthehill.osom.ui.launcher.LauncherViewModelFactory(
-            (LocalContext.current.applicationContext as OsomApplication)
+            (context.applicationContext as OsomApplication)
         )
     )
     val showOnboarding by launcherViewModel.showOnboarding.collectAsStateWithLifecycle()
 
-    if (showOnboarding) {
-        LauncherScreen(navController = navController, launcherViewModel = launcherViewModel)
-    } else if (!permissionsGranted) {
-        PermissionScreen(onPermissionsGranted = { /* We will rely on onResume to update the state */ })
+    val startDestination = if (showOnboarding) {
+        Screen.Launcher.route
     } else {
-        NavHost(navController = navController, startDestination = Screen.Launcher.route) {
-            composable(Screen.Launcher.route) {
-                LauncherScreen(navController = navController, launcherViewModel = launcherViewModel)
-            }
-            composable(Screen.Summary.route) {
-                SummaryScreen(navController = navController, launcherViewModel = launcherViewModel)
-            }
-            composable(Screen.AppList.route) {
-                AppListScreen(navController = navController, launcherViewModel = launcherViewModel)
-            }
+        // If onboarding is already done, we decide the start destination based on permissions.
+        if (PermissionManager.hasUsageStatsPermission(context) &&
+            PermissionManager.hasAccessibilityPermission(context) &&
+            PermissionManager.hasOverlayPermission(context) &&
+            PermissionManager.hasNotificationListenerPermission(context)) {
+            Screen.Launcher.route
+        } else {
+            Screen.Permissions.route
+        }
+    }
+
+    NavHost(navController = navController, startDestination = startDestination) {
+        composable(Screen.Launcher.route) {
+            LauncherScreen(
+                navController = navController,
+                launcherViewModel = launcherViewModel,
+                onOnboardingComplete = {
+                    launcherViewModel.onOnboardingComplete()
+                    if (PermissionManager.hasUsageStatsPermission(context) &&
+                        PermissionManager.hasAccessibilityPermission(context) &&
+                        PermissionManager.hasOverlayPermission(context) &&
+                        PermissionManager.hasNotificationListenerPermission(context)) {
+                        navController.navigate(Screen.Launcher.route) {
+                            popUpTo(Screen.Launcher.route) { inclusive = true }
+                        }
+                    } else {
+                        navController.navigate(Screen.Permissions.route) {
+                            popUpTo(Screen.Launcher.route) { inclusive = true }
+                        }
+                    }
+                }
+            )
+        }
+        composable(Screen.Summary.route) {
+            SummaryScreen(navController = navController, launcherViewModel = launcherViewModel)
+        }
+        composable(Screen.AppList.route) {
+            AppListScreen(navController = navController, launcherViewModel = launcherViewModel)
+        }
+        composable(Screen.Permissions.route) {
+            PermissionScreen(navigateToNextScreen = {
+                navController.navigate(Screen.Launcher.route) {
+                    popUpTo(Screen.Permissions.route) {
+                        inclusive = true
+                    }
+                }
+            })
         }
     }
 }
