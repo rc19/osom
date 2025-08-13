@@ -3,6 +3,7 @@ package studio.atopthehill.osom.utils
 
 import android.Manifest
 import android.app.Activity
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -11,6 +12,7 @@ import android.os.Build
 import android.provider.Settings
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import studio.atopthehill.osom.services.OsomNotificationListenerService
 
 object PermissionManager {
 
@@ -115,5 +117,15 @@ object PermissionManager {
     fun requestNotificationListenerPermission(activity: Activity) {
         val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
         activity.startActivity(intent)
+    }
+
+    fun setNotificationListenerState(context: Context, enabled: Boolean) {
+        val componentName = ComponentName(context, OsomNotificationListenerService::class.java)
+        val newState = if (enabled) {
+            PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+        } else {
+            PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+        }
+        context.packageManager.setComponentEnabledSetting(componentName, newState, PackageManager.DONT_KILL_APP)
     }
 }

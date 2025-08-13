@@ -152,3 +152,26 @@ val AppTypography =
                                 letterSpacing = 0.5.sp
                         )
         )
+
+@OptIn(ExperimentalTextApi::class)
+val FrauncesFontFamily = FontFamily(
+    Font(
+        R.font.fraunces_variable,
+        variationSettings = FontVariation.Settings(
+            FontVariation.weight(400),
+            FontVariation.Setting("SOFT", 0f),
+            FontVariation.Setting("WONK", 0f)
+        )
+    ),
+    Font(
+        R.font.fraunces_variable,
+        variationSettings = FontVariation.Settings(
+            FontVariation.weight(700),
+            FontVariation.Setting("SOFT", 100f),
+            FontVariation.Setting("WONK", 0f)
+        )
+    ),
+    Font(R.font.fraunces_light_italic, FontWeight.Light, FontStyle.Italic),
+    Font(R.font.fraunces_soft_regular, FontWeight.Normal),
+    Font(R.font.fraunces_supersoft_bold, FontWeight.Bold)
+)

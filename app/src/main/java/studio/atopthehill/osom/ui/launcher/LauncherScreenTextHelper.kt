@@ -2,8 +2,7 @@ package studio.atopthehill.osom.ui.launcher
 
 import studio.atopthehill.osom.data.db.entity.UserStats
 
-// Data class to hold the determined text content for the LauncherScreen
-data class ScreenContent(val centerText: String, val inputHintText: String)
+
 
 // Helper function for ordinal numbers (copied from LauncherScreen.kt)
 private fun getOrdinalSuffix(n: Int): String {

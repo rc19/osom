@@ -9,16 +9,15 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -49,14 +48,12 @@ class MainActivity : ComponentActivity() {
         )
         super.onCreate(savedInstanceState)
 
-        PermissionManager.checkAndRequestPermissions(this)
-
         setContent {
             OSOMTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
-                ) { OsomAppNavigation(permissionsGranted) }
+                ) { OsomApp(permissionsGranted) }
             }
         }
     }
@@ -71,47 +68,30 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun OsomAppNavigation(permissionsGranted: Boolean) {
-    val context = LocalContext.current
+fun OsomApp(permissionsGranted: Boolean) {
     val navController = rememberNavController()
-    val launcherViewModel: studio.atopthehill.osom.ui.launcher.LauncherViewModel =
-        androidx.lifecycle.viewmodel.compose.viewModel(
-            factory =
-            studio.atopthehill.osom.ui.launcher.LauncherViewModelFactory(
-                LocalContext.current.applicationContext as OsomApplication
-            )
+    val launcherViewModel: studio.atopthehill.osom.ui.launcher.LauncherViewModel = viewModel(
+        factory = studio.atopthehill.osom.ui.launcher.LauncherViewModelFactory(
+            (LocalContext.current.applicationContext as OsomApplication)
         )
-    val navigateToRoute: String? by launcherViewModel.navigateToRoute.collectAsStateWithLifecycle()
+    )
+    val showOnboarding by launcherViewModel.showOnboarding.collectAsStateWithLifecycle()
 
-    LaunchedEffect(navigateToRoute) {
-        navigateToRoute?.let { route ->
-            navController.navigate(route)
-            launcherViewModel.onNavigationComplete() // Reset after navigation
-        }
-    }
-
-    val startDestination = if (permissionsGranted) {
-        Screen.Launcher.route
+    if (showOnboarding) {
+        LauncherScreen(navController = navController, launcherViewModel = launcherViewModel)
+    } else if (!permissionsGranted) {
+        PermissionScreen(onPermissionsGranted = { /* We will rely on onResume to update the state */ })
     } else {
-        Screen.Permissions.route
-    }
-
-    NavHost(navController = navController, startDestination = startDestination) {
-        composable(Screen.Launcher.route) {
-            LauncherScreen(navController = navController, launcherViewModel = launcherViewModel)
-        }
-        composable(Screen.Summary.route) {
-            SummaryScreen(navController = navController, launcherViewModel = launcherViewModel)
-        }
-        composable(Screen.AppList.route) {
-            AppListScreen(navController = navController, launcherViewModel = launcherViewModel)
-        }
-        composable(Screen.Permissions.route) {
-            PermissionScreen(onPermissionsGranted = {
-                navController.navigate(Screen.Launcher.route) {
-                    popUpTo(Screen.Permissions.route) { inclusive = true }
-                }
-            })
+        NavHost(navController = navController, startDestination = Screen.Launcher.route) {
+            composable(Screen.Launcher.route) {
+                LauncherScreen(navController = navController, launcherViewModel = launcherViewModel)
+            }
+            composable(Screen.Summary.route) {
+                SummaryScreen(navController = navController, launcherViewModel = launcherViewModel)
+            }
+            composable(Screen.AppList.route) {
+                AppListScreen(navController = navController, launcherViewModel = launcherViewModel)
+            }
         }
     }
 }
