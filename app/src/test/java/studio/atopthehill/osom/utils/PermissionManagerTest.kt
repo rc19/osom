@@ -90,4 +90,59 @@ class PermissionManagerTest {
 
         assertTrue(PermissionManager.hasNotificationListenerPermission(context))
     }
+
+    @Test
+    fun `hasUsageStatsPermission returns false when permission is not granted`() {
+        val appOpsManager = context.getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager
+        val shadowAppOpsManager = Shadows.shadowOf(appOpsManager) as ShadowAppOpsManager
+        shadowAppOpsManager.setMode(
+            android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
+            android.os.Process.myUid(),
+            context.packageName,
+            android.app.AppOpsManager.MODE_ERRORED
+        )
+
+        assertFalse(PermissionManager.hasUsageStatsPermission(context))
+    }
+
+    @Test
+    fun `hasAccessibilityPermission returns false when service is disabled`() {
+        Settings.Secure.putString(
+            context.contentResolver,
+            Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES,
+            ""
+        )
+        Settings.Secure.putInt(
+            context.contentResolver,
+            Settings.Secure.ACCESSIBILITY_ENABLED,
+            0
+        )
+
+        assertFalse(PermissionManager.hasAccessibilityPermission(context))
+    }
+
+    @Test
+    fun `hasOverlayPermission returns false when permission is not granted`() {
+        org.robolectric.shadows.ShadowSettings.setCanDrawOverlays(false)
+        assertFalse(PermissionManager.hasOverlayPermission(context))
+    }
+
+    @Test
+    fun `hasNotificationListenerPermission returns false when service is not enabled`() {
+        Settings.Secure.putString(
+            context.contentResolver,
+            "enabled_notification_listeners",
+            ""
+        )
+
+        assertFalse(PermissionManager.hasNotificationListenerPermission(context))
+    }
+
+    @Test
+    fun `requestAccessibilityPermission with context launches correct intent`() {
+        PermissionManager.requestAccessibilityPermission(context)
+
+        val startedIntent = shadowApp.nextStartedActivity
+        assert(startedIntent.action == Settings.ACTION_ACCESSIBILITY_SETTINGS)
+    }
 }
