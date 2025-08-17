@@ -22,8 +22,8 @@ interface UsageCardDao {
         fun getAllUsageCards(): Flow<List<UsageCard>>
 
         // Get all pending tasks, ordered by timestamp (most recent first)
-        @Query("SELECT * FROM usage_cards WHERE status = 'PENDING' ORDER BY timestamp DESC")
-        fun getPendingTasks(): Flow<List<UsageCard>>
+        @Query("SELECT * FROM usage_cards WHERE status = 'PENDING' AND (snoozeUntil IS NULL OR snoozeUntil <= :currentTime) ORDER BY timestamp DESC")
+        fun getPendingTasks(currentTime: LocalDateTime): Flow<List<UsageCard>>
 
         // Get usage cards for a specific day, ordered by timestamp (most recent first)
         @Query(
@@ -43,6 +43,12 @@ interface UsageCardDao {
         // Get a specific usage card by its ID
         @Query("SELECT * FROM usage_cards WHERE id = :id")
         suspend fun getUsageCardById(id: Long): UsageCard?
+
+        @Query("UPDATE usage_cards SET status = :status WHERE id = :id")
+        suspend fun updateTaskStatus(id: Long, status: String)
+
+        @Query("UPDATE usage_cards SET status = :status, snoozeUntil = :snoozeUntil WHERE id = :id")
+        suspend fun updateTaskSnoozeStatus(id: Long, status: String, snoozeUntil: LocalDateTime?)
 
         // Get currently active (those without an actualDuration set) usage cards
         // This might be useful for checking if an app's time limit is still running

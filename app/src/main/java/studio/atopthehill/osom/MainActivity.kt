@@ -28,6 +28,7 @@ import studio.atopthehill.osom.ui.theme.OSOMTheme
 import studio.atopthehill.osom.ui.today.TodayScreen
 import studio.atopthehill.osom.ui.today.TodayViewModel
 import studio.atopthehill.osom.ui.today.TodayViewModelFactory
+import studio.atopthehill.osom.ui.addtask.AddTaskScreen
 import studio.atopthehill.osom.utils.PermissionManager
 
 class MainActivity : ComponentActivity() {
@@ -90,7 +91,7 @@ fun OsomApp() {
             val tasks by todayViewModel.tasks.collectAsStateWithLifecycle()
             TodayScreen(
                 tasks = tasks,
-                onAddTask = { /* TODO */ },
+                onAddTask = { navController.navigate(Screen.AddTask.route) },
                 onTaskCompleted = { task -> todayViewModel.onTaskCompleted(task) },
                 onTaskSnoozed = { task -> todayViewModel.onTaskSnoozed(task) },
                 onTaskDismissed = { task -> todayViewModel.onTaskDismissed(task) }
@@ -131,6 +132,9 @@ fun OsomApp() {
                     }
                 }
             })
+        }
+        composable(Screen.AddTask.route) {
+            AddTaskScreen(navController = navController)
         }
     }
 }

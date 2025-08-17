@@ -9,7 +9,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import studio.atopthehill.osom.OsomApplication
 import studio.atopthehill.osom.data.db.entity.UsageCard
+import studio.atopthehill.osom.data.db.entity.TaskStatus
 import studio.atopthehill.osom.data.repository.AppRepository
+import java.time.LocalDateTime
 
 class TodayViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -34,19 +36,21 @@ class TodayViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onTaskCompleted(task: UsageCard) {
         viewModelScope.launch {
-            // TODO: Implement task completion logic
+            appRepository.updateTaskStatus(task.id, TaskStatus.COMPLETED)
         }
     }
 
     fun onTaskSnoozed(task: UsageCard) {
         viewModelScope.launch {
-            // TODO: Implement task snoozing logic
+            // TODO: Implement a dialog to select snooze duration
+            val snoozeUntil = LocalDateTime.now().plusHours(1)
+            appRepository.updateTaskSnoozeStatus(task.id, TaskStatus.SNOOZED, snoozeUntil)
         }
     }
 
     fun onTaskDismissed(task: UsageCard) {
         viewModelScope.launch {
-            // TODO: Implement task dismissal logic
+            appRepository.updateTaskStatus(task.id, TaskStatus.DISMISSED)
         }
     }
 

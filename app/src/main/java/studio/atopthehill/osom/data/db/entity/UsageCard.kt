@@ -29,6 +29,7 @@ data class UsageCard(
     val timestamp: LocalDateTime,
     val title: String, // The main description of the task or the reason for the usage card
     val status: TaskStatus = TaskStatus.PENDING, // The current status of the task
+    var snoozeUntil: LocalDateTime? = null, // Timestamp until which the task is snoozed
 
     // Nullable fields for app usage tracking, not all cards are tasks
     val openTime: LocalTime? = null,

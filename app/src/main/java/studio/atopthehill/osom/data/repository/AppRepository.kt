@@ -28,6 +28,7 @@ import studio.atopthehill.osom.data.db.dao.UserStatsDao
 import studio.atopthehill.osom.data.db.entity.AppInfo // AppInfo entity
 import studio.atopthehill.osom.data.db.entity.UsageCard
 import studio.atopthehill.osom.data.db.entity.UserStats
+import studio.atopthehill.osom.data.db.entity.TaskStatus
 
 class AppRepository(
         private val context: Context
@@ -144,7 +145,7 @@ class AppRepository(
                 return usageCardDao.getUsageCardsForDay(dateString)
         }
 
-        fun getPendingTasks(): Flow<List<UsageCard>> = usageCardDao.getPendingTasks()
+        fun getPendingTasks(): Flow<List<UsageCard>> = usageCardDao.getPendingTasks(LocalDateTime.now())
 
         fun getActiveUsageCards(): Flow<List<UsageCard>> = usageCardDao.getActiveUsageCards()
 
@@ -158,6 +159,14 @@ class AppRepository(
 
         suspend fun getUsageCardById(id: Long): UsageCard? {
                 return usageCardDao.getUsageCardById(id)
+        }
+
+        suspend fun updateTaskStatus(id: Long, status: TaskStatus) {
+                usageCardDao.updateTaskStatus(id, status.name)
+        }
+
+        suspend fun updateTaskSnoozeStatus(id: Long, status: TaskStatus, snoozeUntil: LocalDateTime?) {
+                usageCardDao.updateTaskSnoozeStatus(id, status.name, snoozeUntil)
         }
 
         suspend fun deleteUsageCardById(id: Long) {
