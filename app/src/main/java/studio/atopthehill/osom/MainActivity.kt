@@ -10,8 +10,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -27,6 +25,9 @@ import studio.atopthehill.osom.ui.navigation.Screen
 import studio.atopthehill.osom.ui.permissions.PermissionScreen
 import studio.atopthehill.osom.ui.summary.SummaryScreen
 import studio.atopthehill.osom.ui.theme.OSOMTheme
+import studio.atopthehill.osom.ui.today.TodayScreen
+import studio.atopthehill.osom.ui.today.TodayViewModel
+import studio.atopthehill.osom.ui.today.TodayViewModelFactory
 import studio.atopthehill.osom.utils.PermissionManager
 
 class MainActivity : ComponentActivity() {
@@ -61,28 +62,40 @@ class MainActivity : ComponentActivity() {
 fun OsomApp() {
     val navController = rememberNavController()
     val context = LocalContext.current
+    val application = context.applicationContext as OsomApplication
+
     val launcherViewModel: studio.atopthehill.osom.ui.launcher.LauncherViewModel = viewModel(
-        factory = studio.atopthehill.osom.ui.launcher.LauncherViewModelFactory(
-            (context.applicationContext as OsomApplication)
-        )
+        factory = studio.atopthehill.osom.ui.launcher.LauncherViewModelFactory(application)
+    )
+    val todayViewModel: TodayViewModel = viewModel(
+        factory = TodayViewModelFactory(application)
     )
     val showOnboarding by launcherViewModel.showOnboarding.collectAsStateWithLifecycle()
 
     val startDestination = if (showOnboarding) {
         Screen.Launcher.route
     } else {
-        // If onboarding is already done, we decide the start destination based on permissions.
         if (PermissionManager.hasUsageStatsPermission(context) &&
             PermissionManager.hasAccessibilityPermission(context) &&
             PermissionManager.hasOverlayPermission(context) &&
             PermissionManager.hasNotificationListenerPermission(context)) {
-            Screen.Launcher.route
+            Screen.Today.route
         } else {
             Screen.Permissions.route
         }
     }
 
     NavHost(navController = navController, startDestination = startDestination) {
+        composable(Screen.Today.route) {
+            val tasks by todayViewModel.tasks.collectAsStateWithLifecycle()
+            TodayScreen(
+                tasks = tasks,
+                onAddTask = { /* TODO */ },
+                onTaskCompleted = { task -> todayViewModel.onTaskCompleted(task) },
+                onTaskSnoozed = { task -> todayViewModel.onTaskSnoozed(task) },
+                onTaskDismissed = { task -> todayViewModel.onTaskDismissed(task) }
+            )
+        }
         composable(Screen.Launcher.route) {
             LauncherScreen(
                 navController = navController,
@@ -93,7 +106,7 @@ fun OsomApp() {
                         PermissionManager.hasAccessibilityPermission(context) &&
                         PermissionManager.hasOverlayPermission(context) &&
                         PermissionManager.hasNotificationListenerPermission(context)) {
-                        navController.navigate(Screen.Launcher.route) {
+                        navController.navigate(Screen.Today.route) {
                             popUpTo(Screen.Launcher.route) { inclusive = true }
                         }
                     } else {
@@ -112,7 +125,7 @@ fun OsomApp() {
         }
         composable(Screen.Permissions.route) {
             PermissionScreen(navigateToNextScreen = {
-                navController.navigate(Screen.Launcher.route) {
+                navController.navigate(Screen.Today.route) {
                     popUpTo(Screen.Permissions.route) {
                         inclusive = true
                     }

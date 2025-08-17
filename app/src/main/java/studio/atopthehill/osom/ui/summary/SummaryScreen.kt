@@ -124,9 +124,9 @@ fun UsageCardSummaryItem(card: UsageCard) {
                                 color = EInkTextPrimary
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        if (card.reason.isNotBlank() && card.reason != "System-detected usage") {
+                        if (card.title.isNotBlank() && card.title != "System-detected usage") {
                                 Text(
-                                        text = "Reason: ${card.reason}",
+                                        text = "Title: ${card.title}",
                                         style =
                                                 MaterialTheme.typography.bodyMedium.copy(
                                                         fontStyle = FontStyle.Italic

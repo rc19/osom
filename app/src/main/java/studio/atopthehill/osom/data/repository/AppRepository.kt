@@ -144,6 +144,8 @@ class AppRepository(
                 return usageCardDao.getUsageCardsForDay(dateString)
         }
 
+        fun getPendingTasks(): Flow<List<UsageCard>> = usageCardDao.getPendingTasks()
+
         fun getActiveUsageCards(): Flow<List<UsageCard>> = usageCardDao.getActiveUsageCards()
 
         suspend fun insertUsageCard(usageCard: UsageCard): Long {
@@ -526,7 +528,7 @@ class AppRepository(
                                 openTime = sessionStartDateTime.toLocalTime(),
                                 requestedDurationMinutes = null,
                                 actualDuration = actualDuration,
-                                reason = "System-detected usage",
+                                title = "System-detected usage",
                                 timestamp = sessionStartDateTime
                         )
                 usageCardDao.insertUsageCard(usageCard)

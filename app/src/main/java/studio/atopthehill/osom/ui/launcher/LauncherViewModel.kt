@@ -297,7 +297,7 @@ class LauncherViewModel(application: Application) :
                             openTime = LocalTime.now(),
                             requestedDurationMinutes = finalDurationMinutes,
                             actualDuration = null, // Will be set on app close/timeout
-                            reason = reason,
+                            title = reason,
                             timestamp = LocalDateTime.now()
                     )
             val cardId = appRepository.insertUsageCard(usageCard)

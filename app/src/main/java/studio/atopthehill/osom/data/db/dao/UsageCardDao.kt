@@ -21,6 +21,10 @@ interface UsageCardDao {
         @Query("SELECT * FROM usage_cards ORDER BY timestamp DESC")
         fun getAllUsageCards(): Flow<List<UsageCard>>
 
+        // Get all pending tasks, ordered by timestamp (most recent first)
+        @Query("SELECT * FROM usage_cards WHERE status = 'PENDING' ORDER BY timestamp DESC")
+        fun getPendingTasks(): Flow<List<UsageCard>>
+
         // Get usage cards for a specific day, ordered by timestamp (most recent first)
         @Query(
                 "SELECT * FROM usage_cards WHERE DATE(timestamp) = DATE(:day) ORDER BY timestamp DESC"
