@@ -88,9 +88,11 @@ fun OsomApp() {
 
     NavHost(navController = navController, startDestination = startDestination) {
         composable(Screen.Today.route) {
-            val tasks by todayViewModel.tasks.collectAsStateWithLifecycle()
+            val pendingTasks by todayViewModel.pendingTasks.collectAsStateWithLifecycle()
+            val completedTasks by todayViewModel.completedTasks.collectAsStateWithLifecycle()
             TodayScreen(
-                tasks = tasks,
+                pendingTasks = pendingTasks,
+                completedTasks = completedTasks,
                 onAddTask = { navController.navigate(Screen.AddTask.route) },
                 onTaskCompleted = { task -> todayViewModel.onTaskCompleted(task) },
                 onTaskSnoozed = { task -> todayViewModel.onTaskSnoozed(task) },

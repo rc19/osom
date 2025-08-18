@@ -18,8 +18,11 @@ class TodayViewModel(application: Application) : AndroidViewModel(application) {
     private val appRepository: AppRepository =
         (application as OsomApplication).appRepository
 
-    private val _tasks = MutableStateFlow<List<UsageCard>>(emptyList())
-    val tasks: StateFlow<List<UsageCard>> = _tasks.asStateFlow()
+    private val _pendingTasks = MutableStateFlow<List<UsageCard>>(emptyList())
+    val pendingTasks: StateFlow<List<UsageCard>> = _pendingTasks.asStateFlow()
+
+    private val _completedTasks = MutableStateFlow<List<UsageCard>>(emptyList())
+    val completedTasks: StateFlow<List<UsageCard>> = _completedTasks.asStateFlow()
 
     init {
         loadTasks()
@@ -27,24 +30,26 @@ class TodayViewModel(application: Application) : AndroidViewModel(application) {
 
     private fun loadTasks() {
         viewModelScope.launch {
-            // This will be connected to the DAO in the next step
             appRepository.getPendingTasks().collect { taskList ->
-                _tasks.value = taskList
+                _pendingTasks.value = taskList
+            }
+        }
+        viewModelScope.launch {
+            appRepository.getCompletedTasks().collect { taskList ->
+                _completedTasks.value = taskList
             }
         }
     }
 
     fun onTaskCompleted(task: UsageCard) {
         viewModelScope.launch {
-            appRepository.updateTaskStatus(task.id, TaskStatus.COMPLETED)
+            appRepository.updateTaskCompletion(task.id, TaskStatus.COMPLETED, LocalDateTime.now())
         }
     }
 
     fun onTaskSnoozed(task: UsageCard) {
         viewModelScope.launch {
-            // TODO: Implement a dialog to select snooze duration
-            val snoozeUntil = LocalDateTime.now().plusHours(1)
-            appRepository.updateTaskSnoozeStatus(task.id, TaskStatus.SNOOZED, snoozeUntil)
+            appRepository.updateTaskTimestamp(task.id, LocalDateTime.now())
         }
     }
 

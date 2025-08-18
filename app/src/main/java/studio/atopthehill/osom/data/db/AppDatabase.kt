@@ -22,7 +22,7 @@ import studio.atopthehill.osom.data.db.entity.UserStats
                         AppInfo::class, /*AppUsage::class,*/
                         UsageCard::class,
                         UserStats::class], // AppUsage removed
-        version = 6, // Incremented version from 5 to 6
+        version = 7, // Incremented version from 6 to 7
         exportSchema = true // Recommended to set to true and manage schemas
 )
 @TypeConverters(Converters::class) // Added TypeConverters

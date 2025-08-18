@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -35,9 +36,11 @@ import studio.atopthehill.osom.data.db.entity.UsageCard
 import studio.atopthehill.osom.ui.theme.OSOMTheme
 import java.time.LocalDateTime
 
+
 @Composable
 fun TodayScreen(
-    tasks: List<UsageCard>,
+    pendingTasks: List<UsageCard>,
+    completedTasks: List<UsageCard>,
     onAddTask: () -> Unit,
     onTaskCompleted: (UsageCard) -> Unit,
     onTaskSnoozed: (UsageCard) -> Unit,
@@ -51,38 +54,52 @@ fun TodayScreen(
         }
     ) { paddingValues ->
         Box(modifier = Modifier.padding(paddingValues)) {
-            if (tasks.isEmpty()) {
+            if (pendingTasks.isEmpty() && completedTasks.isEmpty()) {
                 EmptyState()
             } else {
-                TaskList(
-                    tasks = tasks,
-                    onTaskCompleted = onTaskCompleted,
-                    onTaskSnoozed = onTaskSnoozed,
-                    onTaskDismissed = onTaskDismissed
-                )
+                LazyColumn(modifier = Modifier.padding(16.dp)) {
+                    if (pendingTasks.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = "Pending",
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
+                        }
+                        items(pendingTasks) { task ->
+                            TaskCard(
+                                task = task,
+                                onCompleted = { onTaskCompleted(task) },
+                                onSnooze = { onTaskSnoozed(task) },
+                                onDismiss = { onTaskDismissed(task) }
+                            )
+                        }
+                    }
+
+                    if (completedTasks.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = "Completed",
+                                style = MaterialTheme.typography.titleMedium,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
+                        }
+                        items(completedTasks) { task ->
+                            TaskCard(
+                                task = task,
+                                onCompleted = { onTaskCompleted(task) },
+                                onSnooze = { onTaskSnoozed(task) },
+                                onDismiss = { onTaskDismissed(task) }
+                            )
+                        }
+                    }
+                }
             }
         }
     }
 }
 
-@Composable
-fun TaskList(
-    tasks: List<UsageCard>,
-    onTaskCompleted: (UsageCard) -> Unit,
-    onTaskSnoozed: (UsageCard) -> Unit,
-    onTaskDismissed: (UsageCard) -> Unit
-) {
-    LazyColumn(modifier = Modifier.padding(16.dp)) {
-        items(tasks) { task ->
-            TaskCard(
-                task = task,
-                onCompleted = { onTaskCompleted(task) },
-                onSnooze = { onTaskSnoozed(task) },
-                onDismiss = { onTaskDismissed(task) }
-            )
-        }
-    }
-}
+
 
 @Composable
 fun TaskCard(
@@ -100,7 +117,8 @@ fun TaskCard(
         ) {
             Checkbox(
                 checked = task.status == TaskStatus.COMPLETED,
-                onCheckedChange = { onCompleted() }
+                onCheckedChange = { onCompleted() },
+                enabled = task.status != TaskStatus.COMPLETED
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -110,11 +128,13 @@ fun TaskCard(
                     style = MaterialTheme.typography.bodySmall
                 )
             }
-            IconButton(onClick = onSnooze) {
-                Icon(Icons.Filled.Alarm, contentDescription = "Snooze")
-            }
-            IconButton(onClick = onDismiss) {
-                Icon(Icons.Filled.Close, contentDescription = "Dismiss")
+            if (task.status != TaskStatus.COMPLETED) {
+                IconButton(onClick = onSnooze) {
+                    Icon(Icons.Filled.Alarm, contentDescription = "Snooze")
+                }
+                IconButton(onClick = onDismiss) {
+                    Icon(Icons.Filled.Close, contentDescription = "Dismiss")
+                }
             }
         }
     }
@@ -158,7 +178,8 @@ fun EmptyState() {
 fun TodayScreenPreview_Empty() {
     OSOMTheme {
         TodayScreen(
-            tasks = emptyList(),
+            pendingTasks = emptyList(),
+            completedTasks = emptyList(),
             onAddTask = {},
             onTaskCompleted = {},
             onTaskSnoozed = {},
@@ -172,10 +193,12 @@ fun TodayScreenPreview_Empty() {
 fun TodayScreenPreview_WithTasks() {
     OSOMTheme {
         TodayScreen(
-            tasks = listOf(
+            pendingTasks = listOf(
                 UsageCard(1, "WhatsApp", "com.whatsapp", LocalDateTime.now(), "Follow up with Priya about the report", TaskStatus.PENDING),
                 UsageCard(2, "Email", "com.google.android.gm", LocalDateTime.now().minusDays(1), "Call the bank tomorrow morning", TaskStatus.PENDING),
-                UsageCard(3, "Messages", "com.google.android.apps.messaging", LocalDateTime.now().minusDays(1), "Pick up dry cleaning", TaskStatus.COMPLETED)
+            ),
+            completedTasks = listOf(
+                UsageCard(3, "Messages", "com.google.android.apps.messaging", LocalDateTime.now().minusDays(1), "Pick up dry cleaning", TaskStatus.COMPLETED, completionTimestamp = LocalDateTime.now())
             ),
             onAddTask = {},
             onTaskCompleted = {},

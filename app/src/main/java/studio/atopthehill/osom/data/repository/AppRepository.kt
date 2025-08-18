@@ -147,6 +147,8 @@ class AppRepository(
 
         fun getPendingTasks(): Flow<List<UsageCard>> = usageCardDao.getPendingTasks(LocalDateTime.now())
 
+        fun getCompletedTasks(): Flow<List<UsageCard>> = usageCardDao.getCompletedTasks()
+
         fun getActiveUsageCards(): Flow<List<UsageCard>> = usageCardDao.getActiveUsageCards()
 
         suspend fun insertUsageCard(usageCard: UsageCard): Long {
@@ -167,6 +169,14 @@ class AppRepository(
 
         suspend fun updateTaskSnoozeStatus(id: Long, status: TaskStatus, snoozeUntil: LocalDateTime?) {
                 usageCardDao.updateTaskSnoozeStatus(id, status.name, snoozeUntil)
+        }
+
+        suspend fun updateTaskCompletion(id: Long, status: TaskStatus, completionTimestamp: LocalDateTime?) {
+                usageCardDao.updateTaskCompletion(id, status.name, completionTimestamp)
+        }
+
+        suspend fun updateTaskTimestamp(id: Long, timestamp: LocalDateTime) {
+                usageCardDao.updateTaskTimestamp(id, timestamp)
         }
 
         suspend fun deleteUsageCardById(id: Long) {
