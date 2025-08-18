@@ -1,5 +1,5 @@
 Project name: Osom (An android accesibility app to retain context across the mobile device by analysing the screen at all times and managinf relevant infiormation. Meant to reduce congnitive load by remembering things on their behalf and prompting the user at the right time for reminders/follow ups.)
-As of date: Aug 5, 2025
+As of date: Aug 18, 2025
 
 ## Project Analysis
 
@@ -11,7 +11,7 @@ Osom is an Android application that functions as a custom launcher and an access
 
 The project is structured into three main layers: UI, Services, and Data.
 
-*   **UI Layer:** Built with Jetpack Compose. It includes a custom launcher, an app list screen, and a summary screen.
+*   **UI Layer:** Built with Jetpack Compose. It includes a custom launcher, a "Today" dashboard for tasks, an app list screen, and a summary screen.
 *   **Services Layer:** This is the core of the app's functionality, running in the background to collect data. It includes:
     *   `OsomAccessibilityService`: To read screen content and context.
     *   `OsomNotificationListenerService`: To capture and process notifications.
@@ -50,11 +50,14 @@ The app uses a Room database (`AppDatabase.kt`) with the following entities:
     *   `packageName`: (Primary Key) The package name of the app.
     *   `appName`: The user-facing name of the app.
     *   `totalTimeInForeground`: Total time the app has been in the foreground.
-*   **`UsageCard`**: Represents a card for the summary screen, likely showing usage information.
+*   **`UsageCard`**: Represents a task or a piece of actionable information for the user.
     *   `id`: (Primary Key) Auto-generated ID.
-    *   `title`: Title of the card.
-    *   `content`: Content of the card.
-    *   `timestamp`: When the card was created.
+    *   `appName`: The name of the app this task originated from.
+    *   `packageName`: The package name of the source app.
+    *   `timestamp`: When the task was created or last updated.
+    *   `title`: The main text of the task.
+    *   `status`: The current status of the task (e.g., `PENDING`, `COMPLETED`, `DISMISSED`).
+    *   `snoozeUntil`: If the task is snoozed, this field holds the time until which it should be hidden.
 *   **`UserStats`**: Stores statistics about the user's overall phone usage.
     *   `id`: (Primary Key) Auto-generated ID.
     *   `totalScreenTime`: Total screen time.
@@ -65,6 +68,7 @@ The app uses a Room database (`AppDatabase.kt`) with the following entities:
 
 *   **`MainActivity.kt`**: The main entry point of the application. It sets up the Compose content and the navigation. The app is configured to be a home screen launcher (`category.HOME`).
 *   **`LauncherScreen.kt` / `LauncherViewModel.kt`**: This is the main screen of the app. The ViewModel (`LauncherViewModel`) is responsible for fetching the list of installed apps from the `AppRepository` and providing them to the UI.
+*   **`TodayScreen.kt` / `TodayViewModel.kt`**: This is the main dashboard of the app, showing a list of pending tasks. The ViewModel is responsible for fetching tasks from the `AppRepository` and handling user actions like completing, dismissing, or snoozing a task.
 *   **`AppListScreen.kt`**: A screen that likely displays a complete list of all installed applications.
 *   **`SummaryScreen.kt`**: A screen to display usage statistics and other relevant information, likely populated by the `UsageCard` entity.
 *   **`Screen.kt`**: Defines the navigation routes for the application using a sealed class.
@@ -78,7 +82,7 @@ The app uses a Room database (`AppDatabase.kt`) with the following entities:
 ### 8. Data Layer
 
 *   **`AppRepository.kt`**: Follows the repository pattern, acting as a single source of truth for the application's data. It abstracts the data sources (the Room database) from the rest of the app, particularly the ViewModels.
-*   **DAOs (`AppInfoDao`, `UsageCardDao`, `UserStatsDao`)**: Data Access Objects for the Room database. They define the SQL queries for interacting with the database tables.
+*   **DAOs (`AppInfoDao`, `UsageCardDao`, `UserStatsDao`)**: Data Access Objects for the Room database. They define the SQL queries for interacting with the database tables. `UsageCardDao` has been updated with queries to manage task status and timestamps.
 *   **`FileLogger.kt` & `UsageStatsLogger.kt`**: Utility classes for logging information to files, which can be useful for debugging and analysis.
 
 ### Summary of Findings
