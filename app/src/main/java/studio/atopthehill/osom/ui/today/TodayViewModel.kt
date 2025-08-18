@@ -13,10 +13,10 @@ import studio.atopthehill.osom.data.db.entity.TaskStatus
 import studio.atopthehill.osom.data.repository.AppRepository
 import java.time.LocalDateTime
 
-class TodayViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val appRepository: AppRepository =
-        (application as OsomApplication).appRepository
+class TodayViewModel(
+    application: Application,
+    private val appRepository: AppRepository
+) : AndroidViewModel(application) {
 
     private val _pendingTasks = MutableStateFlow<List<UsageCard>>(emptyList())
     val pendingTasks: StateFlow<List<UsageCard>> = _pendingTasks.asStateFlow()
