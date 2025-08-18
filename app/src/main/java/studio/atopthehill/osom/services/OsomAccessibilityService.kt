@@ -12,12 +12,23 @@ import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import studio.atopthehill.osom.OsomApplication
 import studio.atopthehill.osom.config.LogConfig
+import studio.atopthehill.osom.data.repository.AppRepository
 import studio.atopthehill.osom.utils.FileLogger
 
 class OsomAccessibilityService : AccessibilityService() {
 
     private val TAG = "OsomAccessibilityService"
+    private val serviceJob = SupervisorJob()
+    private val serviceScope = CoroutineScope(Dispatchers.Main + serviceJob)
+
+    private lateinit var appRepository: AppRepository
 
     companion object {
         const val ACTION_SET_ACCESSIBILITY_TARGET =
@@ -56,6 +67,7 @@ class OsomAccessibilityService : AccessibilityService() {
 
     override fun onCreate() {
         super.onCreate()
+        appRepository = (application as OsomApplication).appRepository
         val intentFilter =
                 IntentFilter().apply {
                     addAction(ACTION_SET_ACCESSIBILITY_TARGET)
@@ -138,212 +150,223 @@ class OsomAccessibilityService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (LogConfig.logAccessibilityEvents) {
-            if (event == null) return
+        if (event == null) return
 
-            val currentPackageFilters =
-                    this.serviceInfo?.packageNames?.joinToString(", ") ?: "ALL (null)"
-            val eventType = AccessibilityEvent.eventTypeToString(event.eventType)
-            val packageName = event.packageName?.toString() ?: "N/A"
-            val className = event.className?.toString() ?: "N/A"
-            // val eventText = event.text?.joinToString(", ") ?: "N/A" // We will log more detailed
-            // text below
+        val packageName = event.packageName?.toString() ?: return
+        val currentServiceInfo = serviceInfo
 
-            Log.d(
-                    TAG,
-                    "AccessibilityEvent: Pkg[$packageName], Type[$eventType], Class[$className], CurrentFilters[$currentPackageFilters]"
-            )
-            FileLogger.log(
-                    TAG,
-                    "AccessibilityEvent: Pkg[$packageName], Type[$eventType], Class[$className], CurrentFilters[$currentPackageFilters]"
-            )
+        serviceScope.launch {
+            val whitelistedApps = appRepository.allInstalledApps.first().filter { it.isWhitelisted }
+            val isWhitelisted = whitelistedApps.any { it.packageName == packageName }
 
-            // Log detailed window content if canRetrieveWindowContent is enabled
-            if (this.serviceInfo?.canRetrieveWindowContent == true) {
-                val sourceNode = event.source
-                if (sourceNode != null) {
-                    val sourceNodeLog =
-                            "Event Source Node: ${sourceNode.className}, Text: '${sourceNode.text}', ContentDesc: '${sourceNode.contentDescription}', ViewId: ${sourceNode.viewIdResourceName}"
-                    Log.d(TAG, sourceNodeLog)
-                    FileLogger.log(TAG, sourceNodeLog)
-                    logNodeHierarchy(sourceNode, 0, true)
-                    sourceNode.recycle() // Important to recycle nodes
-                } else {
-                    val noSourceLog =
-                            "Event source node is null for Pkg[$packageName], Type[$eventType]"
-                    Log.d(TAG, noSourceLog)
-                    FileLogger.log(TAG, noSourceLog)
-                }
+            if (!isWhitelisted) {
+                return@launch
             }
 
-            when (event.eventType) {
-                AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
-                    // Log raw integer for contentChangeTypes, toString helper not directly
-                    // available
-                    val log =
+            if (LogConfig.logAccessibilityEvents) {
+                val currentPackageFilters =
+                    currentServiceInfo?.packageNames?.joinToString(", ") ?: "ALL (null)"
+                val eventType = AccessibilityEvent.eventTypeToString(event.eventType)
+                val className = event.className?.toString() ?: "N/A"
+                // val eventText = event.text?.joinToString(", ") ?: "N/A" // We will log more detailed
+                // text below
+
+                Log.d(
+                    TAG,
+                    "AccessibilityEvent: Pkg[$packageName], Type[$eventType], Class[$className], CurrentFilters[$currentPackageFilters]"
+                )
+                FileLogger.log(
+                    TAG,
+                    "AccessibilityEvent: Pkg[$packageName], Type[$eventType], Class[$className], CurrentFilters[$currentPackageFilters]"
+                )
+
+                // Log detailed window content if canRetrieveWindowContent is enabled
+                if (currentServiceInfo?.canRetrieveWindowContent == true) {
+                    val sourceNode = event.source
+                    if (sourceNode != null) {
+                        val sourceNodeLog =
+                            "Event Source Node: ${sourceNode.className}, Text: '${sourceNode.text}', ContentDesc: '${sourceNode.contentDescription}', ViewId: ${sourceNode.viewIdResourceName}"
+                        Log.d(TAG, sourceNodeLog)
+                        FileLogger.log(TAG, sourceNodeLog)
+                        logNodeHierarchy(sourceNode, 0, true)
+                        sourceNode.recycle() // Important to recycle nodes
+                    } else {
+                        val noSourceLog =
+                            "Event source node is null for Pkg[$packageName], Type[$eventType]"
+                        Log.d(TAG, noSourceLog)
+                        FileLogger.log(TAG, noSourceLog)
+                    }
+                }
+
+                when (event.eventType) {
+                    AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
+                        // Log raw integer for contentChangeTypes, toString helper not directly
+                        // available
+                        val log =
                             "Window State Changed: Pkg[$packageName], ContentChangeTypesRaw: ${event.contentChangeTypes}, Action: ${event.action}, EventText: ${event.text.joinToString()}, WindowId: ${event.windowId}"
-                    Log.d(TAG, log)
-                    FileLogger.log(TAG, log)
-                }
-                AccessibilityEvent.TYPE_VIEW_CLICKED -> {
-                    val log =
+                        Log.d(TAG, log)
+                        FileLogger.log(TAG, log)
+                    }
+                    AccessibilityEvent.TYPE_VIEW_CLICKED -> {
+                        val log =
                             "View Clicked: Pkg[$packageName] (see node hierarchy for details of source: ${event.source?.viewIdResourceName ?: "N/A"})"
-                    Log.d(TAG, log)
-                    FileLogger.log(TAG, log)
-                }
-                AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED -> {
-                    val log =
+                        Log.d(TAG, log)
+                        FileLogger.log(TAG, log)
+                    }
+                    AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED -> {
+                        val log =
                             "Notification State Changed: Pkg[$packageName], EventText: ${event.text.joinToString()}, ParcelableData: ${event.parcelableData}"
-                    Log.d(TAG, log)
-                    FileLogger.log(TAG, log)
-                }
-                AccessibilityEvent.TYPE_ANNOUNCEMENT -> {
-                    val log =
+                        Log.d(TAG, log)
+                        FileLogger.log(TAG, log)
+                    }
+                    AccessibilityEvent.TYPE_ANNOUNCEMENT -> {
+                        val log =
                             "Announcement: Pkg[$packageName], EventText: ${event.text.joinToString()}"
-                    Log.d(TAG, log)
-                    FileLogger.log(TAG, log)
-                }
-                AccessibilityEvent.TYPE_ASSIST_READING_CONTEXT -> {
-                    // This event is usually requested by the system for assist purposes.
-                    // The main data is in the source node's hierarchy.
-                    val log =
+                        Log.d(TAG, log)
+                        FileLogger.log(TAG, log)
+                    }
+                    AccessibilityEvent.TYPE_ASSIST_READING_CONTEXT -> {
+                        // This event is usually requested by the system for assist purposes.
+                        // The main data is in the source node's hierarchy.
+                        val log =
                             "Assist Reading Context: Pkg[$packageName] (see node hierarchy for details)"
-                    Log.d(TAG, log)
-                    FileLogger.log(TAG, log)
-                }
-                AccessibilityEvent.TYPE_VIEW_CONTEXT_CLICKED -> { // Corrected constant name
-                    val log =
+                        Log.d(TAG, log)
+                        FileLogger.log(TAG, log)
+                    }
+                    AccessibilityEvent.TYPE_VIEW_CONTEXT_CLICKED -> { // Corrected constant name
+                        val log =
                             "Context Clicked: Pkg[$packageName] (see node hierarchy for details of source: ${event.source?.viewIdResourceName ?: "N/A"})"
-                    Log.d(TAG, log)
-                    FileLogger.log(TAG, log)
-                }
-                AccessibilityEvent.TYPE_GESTURE_DETECTION_START -> {
-                    val log = "Gesture Detection Started: Pkg[$packageName]"
-                    Log.d(TAG, log)
-                    FileLogger.log(TAG, log)
-                }
-                AccessibilityEvent.TYPE_GESTURE_DETECTION_END -> {
-                    val log = "Gesture Detection Ended: Pkg[$packageName]"
-                    Log.d(TAG, log)
-                    FileLogger.log(TAG, log)
-                }
-                AccessibilityEvent.TYPE_TOUCH_EXPLORATION_GESTURE_START -> {
-                    val log = "Touch Exploration Gesture Started: Pkg[$packageName]"
-                    Log.d(TAG, log)
-                    FileLogger.log(TAG, log)
-                }
-                AccessibilityEvent.TYPE_TOUCH_EXPLORATION_GESTURE_END -> {
-                    val log = "Touch Exploration Gesture Ended: Pkg[$packageName]"
-                    Log.d(TAG, log)
-                    FileLogger.log(TAG, log)
-                }
-                AccessibilityEvent.TYPE_TOUCH_INTERACTION_START -> {
-                    val log = "Touch Interaction Started: Pkg[$packageName]"
-                    Log.d(TAG, log)
-                    FileLogger.log(TAG, log)
-                }
-                AccessibilityEvent.TYPE_TOUCH_INTERACTION_END -> {
-                    val log = "Touch Interaction Ended: Pkg[$packageName]"
-                    Log.d(TAG, log)
-                    FileLogger.log(TAG, log)
-                }
-                AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED -> {
-                    val log =
+                        Log.d(TAG, log)
+                        FileLogger.log(TAG, log)
+                    }
+                    AccessibilityEvent.TYPE_GESTURE_DETECTION_START -> {
+                        val log = "Gesture Detection Started: Pkg[$packageName]"
+                        Log.d(TAG, log)
+                        FileLogger.log(TAG, log)
+                    }
+                    AccessibilityEvent.TYPE_GESTURE_DETECTION_END -> {
+                        val log = "Gesture Detection Ended: Pkg[$packageName]"
+                        Log.d(TAG, log)
+                        FileLogger.log(TAG, log)
+                    }
+                    AccessibilityEvent.TYPE_TOUCH_EXPLORATION_GESTURE_START -> {
+                        val log = "Touch Exploration Gesture Started: Pkg[$packageName]"
+                        Log.d(TAG, log)
+                        FileLogger.log(TAG, log)
+                    }
+                    AccessibilityEvent.TYPE_TOUCH_EXPLORATION_GESTURE_END -> {
+                        val log = "Touch Exploration Gesture Ended: Pkg[$packageName]"
+                        Log.d(TAG, log)
+                        FileLogger.log(TAG, log)
+                    }
+                    AccessibilityEvent.TYPE_TOUCH_INTERACTION_START -> {
+                        val log = "Touch Interaction Started: Pkg[$packageName]"
+                        Log.d(TAG, log)
+                        FileLogger.log(TAG, log)
+                    }
+                    AccessibilityEvent.TYPE_TOUCH_INTERACTION_END -> {
+                        val log = "Touch Interaction Ended: Pkg[$packageName]"
+                        Log.d(TAG, log)
+                        FileLogger.log(TAG, log)
+                    }
+                    AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED -> {
+                        val log =
                             "View Accessibility Focused: Pkg[$packageName] (see node hierarchy for details of source: ${event.source?.viewIdResourceName ?: "N/A"})"
-                    Log.d(TAG, log)
-                    FileLogger.log(TAG, log)
-                }
-                AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUS_CLEARED -> {
-                    val log =
+                        Log.d(TAG, log)
+                        FileLogger.log(TAG, log)
+                    }
+                    AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUS_CLEARED -> {
+                        val log =
                             "View Accessibility Focus Cleared: Pkg[$packageName] (see node hierarchy for details of source: ${event.source?.viewIdResourceName ?: "N/A"})"
-                    Log.d(TAG, log)
-                    FileLogger.log(TAG, log)
-                }
-                AccessibilityEvent.TYPE_VIEW_FOCUSED -> {
-                    val log =
+                        Log.d(TAG, log)
+                        FileLogger.log(TAG, log)
+                    }
+                    AccessibilityEvent.TYPE_VIEW_FOCUSED -> {
+                        val log =
                             "View Focused: Pkg[$packageName] (see node hierarchy for details of source: ${event.source?.viewIdResourceName ?: "N/A"})"
-                    Log.d(TAG, log)
-                    FileLogger.log(TAG, log)
-                }
-                AccessibilityEvent.TYPE_VIEW_HOVER_ENTER -> {
-                    val log =
+                        Log.d(TAG, log)
+                        FileLogger.log(TAG, log)
+                    }
+                    AccessibilityEvent.TYPE_VIEW_HOVER_ENTER -> {
+                        val log =
                             "View Hover Enter: Pkg[$packageName] (see node hierarchy for details of source: ${event.source?.viewIdResourceName ?: "N/A"})"
-                    Log.d(TAG, log)
-                    FileLogger.log(TAG, log)
-                }
-                AccessibilityEvent.TYPE_VIEW_HOVER_EXIT -> {
-                    val log =
+                        Log.d(TAG, log)
+                        FileLogger.log(TAG, log)
+                    }
+                    AccessibilityEvent.TYPE_VIEW_HOVER_EXIT -> {
+                        val log =
                             "View Hover Exit: Pkg[$packageName] (see node hierarchy for details of source: ${event.source?.viewIdResourceName ?: "N/A"})"
-                    Log.d(TAG, log)
-                    FileLogger.log(TAG, log)
-                }
-                AccessibilityEvent.TYPE_VIEW_LONG_CLICKED -> {
-                    val log =
+                        Log.d(TAG, log)
+                        FileLogger.log(TAG, log)
+                    }
+                    AccessibilityEvent.TYPE_VIEW_LONG_CLICKED -> {
+                        val log =
                             "View Long Clicked: Pkg[$packageName] (see node hierarchy for details of source: ${event.source?.viewIdResourceName ?: "N/A"})"
-                    Log.d(TAG, log)
-                    FileLogger.log(TAG, log)
-                }
-                AccessibilityEvent.TYPE_VIEW_SCROLLED -> {
-                    var scrollDetails =
+                        Log.d(TAG, log)
+                        FileLogger.log(TAG, log)
+                    }
+                    AccessibilityEvent.TYPE_VIEW_SCROLLED -> {
+                        var scrollDetails =
                             "ScrollX: ${event.scrollX}, ScrollY: ${event.scrollY}, MaxScrollX: ${event.maxScrollX}, MaxScrollY: ${event.maxScrollY}"
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        scrollDetails +=
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            scrollDetails +=
                                 ", ScrollDeltaX: ${event.scrollDeltaX}, ScrollDeltaY: ${event.scrollDeltaY}"
-                    }
-                    val log =
+                        }
+                        val log =
                             "View Scrolled: Pkg[$packageName], $scrollDetails (see node hierarchy for details of source: ${event.source?.viewIdResourceName ?: "N/A"})"
-                    Log.d(TAG, log)
-                    FileLogger.log(TAG, log)
-                }
-                AccessibilityEvent.TYPE_VIEW_SELECTED -> {
-                    val log =
-                            "View Selected: Pkg[$packageName], EventText: ${event.text.joinToString()} (see node hierarchy for details of source: ${event.source?.viewIdResourceName ?: "N/A"})"
-                    Log.d(TAG, log)
-                    FileLogger.log(TAG, log)
-                }
-                AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED -> {
-                    val log =
-                            "View Text Changed: Pkg[$packageName], FromIndex: ${event.fromIndex}, Added: ${event.addedCount}, Removed: ${event.removedCount}, BeforeText: '${event.beforeText}', EventText: ${event.text.joinToString()} (see node for current text)"
-                    Log.d(TAG, log)
-                    FileLogger.log(TAG, log)
-                }
-                AccessibilityEvent.TYPE_VIEW_TEXT_SELECTION_CHANGED -> {
-                    val log =
-                            "View Text Selection Changed: Pkg[$packageName], FromIndex: ${event.fromIndex}, ToIndex: ${event.toIndex}, ItemCount: ${event.itemCount}, EventText: ${event.text.joinToString()} (current selection)"
-                    Log.d(TAG, log)
-                    FileLogger.log(TAG, log)
-                }
-                AccessibilityEvent.TYPE_VIEW_TEXT_TRAVERSED_AT_MOVEMENT_GRANULARITY -> {
-                    // Log raw integers for movementGranularity and action
-                    val log =
-                            "View Text Traversed: Pkg[$packageName], GranularityRaw: ${event.movementGranularity}, ActionRaw: ${event.action}, FromIndex: ${event.fromIndex}, ToIndex: ${event.toIndex}, EventText: ${event.text.joinToString()}"
-                    Log.d(TAG, log)
-                    FileLogger.log(TAG, log)
-                }
-                AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
-                    // Log raw integer for contentChangeTypes
-                    val log =
-                            "Window Content Changed: Pkg[$packageName], ContentChangeTypesRaw: ${event.contentChangeTypes}, WindowId: ${event.windowId} (see node hierarchy for details if source exists: ${event.source?.viewIdResourceName ?: "N/A"})"
-                    Log.d(TAG, log)
-                    FileLogger.log(TAG, log)
-                }
-                AccessibilityEvent.TYPE_WINDOWS_CHANGED -> {
-                    var windowChangesStr = ""
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                        // Log raw integer for windowChanges
-                        windowChangesStr = " WindowChangesRaw: ${event.windowChanges}"
+                        Log.d(TAG, log)
+                        FileLogger.log(TAG, log)
                     }
-                    val log =
+                    AccessibilityEvent.TYPE_VIEW_SELECTED -> {
+                        val log =
+                            "View Selected: Pkg[$packageName], EventText: ${event.text.joinToString()} (see node hierarchy for details of source: ${event.source?.viewIdResourceName ?: "N/A"})"
+                        Log.d(TAG, log)
+                        FileLogger.log(TAG, log)
+                    }
+                    AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED -> {
+                        val log =
+                            "View Text Changed: Pkg[$packageName], FromIndex: ${event.fromIndex}, Added: ${event.addedCount}, Removed: ${event.removedCount}, BeforeText: '${event.beforeText}', EventText: ${event.text.joinToString()} (see node for current text)"
+                        Log.d(TAG, log)
+                        FileLogger.log(TAG, log)
+                    }
+                    AccessibilityEvent.TYPE_VIEW_TEXT_SELECTION_CHANGED -> {
+                        val log =
+                            "View Text Selection Changed: Pkg[$packageName], FromIndex: ${event.fromIndex}, ToIndex: ${event.toIndex}, ItemCount: ${event.itemCount}, EventText: ${event.text.joinToString()} (current selection)"
+                        Log.d(TAG, log)
+                        FileLogger.log(TAG, log)
+                    }
+                    AccessibilityEvent.TYPE_VIEW_TEXT_TRAVERSED_AT_MOVEMENT_GRANULARITY -> {
+                        // Log raw integers for movementGranularity and action
+                        val log =
+                            "View Text Traversed: Pkg[$packageName], GranularityRaw: ${event.movementGranularity}, ActionRaw: ${event.action}, FromIndex: ${event.fromIndex}, ToIndex: ${event.toIndex}, EventText: ${event.text.joinToString()}"
+                        Log.d(TAG, log)
+                        FileLogger.log(TAG, log)
+                    }
+                    AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
+                        // Log raw integer for contentChangeTypes
+                        val log =
+                            "Window Content Changed: Pkg[$packageName], ContentChangeTypesRaw: ${event.contentChangeTypes}, WindowId: ${event.windowId} (see node hierarchy for details if source exists: ${event.source?.viewIdResourceName ?: "N/A"})"
+                        Log.d(TAG, log)
+                        FileLogger.log(TAG, log)
+                    }
+                    AccessibilityEvent.TYPE_WINDOWS_CHANGED -> {
+                        var windowChangesStr = ""
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                            // Log raw integer for windowChanges
+                            windowChangesStr = " WindowChangesRaw: ${event.windowChanges}"
+                        }
+                        val log =
                             "Windows Changed: Pkg[$packageName], EventTime: ${event.eventTime}$windowChangesStr"
-                    Log.d(TAG, log)
-                    FileLogger.log(TAG, log)
-                }
-                // Default case for any other event types not explicitly handled above
-                else -> {
-                    val log =
+                        Log.d(TAG, log)
+                        FileLogger.log(TAG, log)
+                    }
+                    // Default case for any other event types not explicitly handled above
+                    else -> {
+                        val log =
                             "Other Accessibility Event: Pkg[$packageName], EventType: ${AccessibilityEvent.eventTypeToString(event.eventType)} (see node hierarchy if source exists)"
-                    Log.d(TAG, log)
-                    FileLogger.log(TAG, log)
+                        Log.d(TAG, log)
+                        FileLogger.log(TAG, log)
+                    }
                 }
             }
         }

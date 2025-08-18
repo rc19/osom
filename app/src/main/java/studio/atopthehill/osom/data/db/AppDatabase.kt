@@ -1,7 +1,7 @@
 package studio.atopthehill.osom.data.db
 
-// import androidx.room.migration.Migration // Will be needed if not using fallback
-// import androidx.sqlite.db.SupportSQLiteDatabase // Will be needed if not using fallback
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 // AppUsageDao import will be removed by tool if not used
 // AppUsage entity import will be removed by tool if not used
 import android.content.Context
@@ -22,7 +22,7 @@ import studio.atopthehill.osom.data.db.entity.UserStats
                         AppInfo::class, /*AppUsage::class,*/
                         UsageCard::class,
                         UserStats::class], // AppUsage removed
-        version = 7, // Incremented version from 6 to 7
+        version = 8, // Incremented version from 7 to 8
         exportSchema = true // Recommended to set to true and manage schemas
 )
 @TypeConverters(Converters::class) // Added TypeConverters
@@ -36,6 +36,12 @@ abstract class AppDatabase : RoomDatabase() { // Abstract class for the Room dat
     companion object { // Companion object for singleton instance
         @Volatile // Ensures visibility of changes to other threads
         private var INSTANCE: AppDatabase? = null // Singleton instance of the database
+
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE user_stats ADD COLUMN activeReminders INTEGER NOT NULL DEFAULT 1")
+            }
+        }
 
         // Migration from 1 to 2 (Placeholder if not using fallbackToDestructiveMigration)
         // val MIGRATION_1_2 = object : Migration(1, 2) {
@@ -64,9 +70,8 @@ abstract class AppDatabase : RoomDatabase() { // Abstract class for the Room dat
                                                 AppDatabase::class.java,
                                                 "osom_database" // Name of the database file
                                         )
-                                        // .addMigrations(MIGRATION_1_2) // Add migrations if not
-                                        // using fallback
-                                        .fallbackToDestructiveMigration() // Destroys and recreates
+                                        .addMigrations(MIGRATION_7_8) // Add migrations if not
+                                        // .fallbackToDestructiveMigration() // Destroys and recreates
                                         // if no migration found -
                                         // USE WITH CAUTION
                                         .build()

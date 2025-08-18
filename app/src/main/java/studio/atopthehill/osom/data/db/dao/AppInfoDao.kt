@@ -71,4 +71,7 @@ interface AppInfoDao { // Defines the DAO interface for AppInfo entities
 
         @Query("DELETE FROM app_info") // SQL query to delete all apps from the table
         suspend fun clearAllApps() // Suspended function to clear the entire app_info table
+
+        @Query("UPDATE app_info SET is_whitelisted = :isWhitelisted WHERE package_name = :packageName")
+        suspend fun setWhitelisted(packageName: String, isWhitelisted: Boolean)
 }

@@ -31,17 +31,12 @@ import studio.atopthehill.osom.data.db.entity.UserStats
 import studio.atopthehill.osom.data.db.entity.TaskStatus
 
 class AppRepository(
-        private val context: Context
+        private val context: Context,
+        private val appInfoDao: AppInfoDao,
+        private val usageCardDao: UsageCardDao,
+        private val userStatsDao: UserStatsDao
 ) { // Repository class, takes Context for PackageManager
 
-        private val appInfoDao: AppInfoDao =
-                AppDatabase.getDatabase(context).appInfoDao() // Instance of AppInfoDao
-        // private val appUsageDao: AppUsageDao = AppDatabase.getDatabase(context).appUsageDao() //
-        // Instance of AppUsageDao - REMOVED
-        private val usageCardDao: UsageCardDao = // Instance of UsageCardDao
-                AppDatabase.getDatabase(context).usageCardDao()
-        private val userStatsDao: UserStatsDao = // Instance of UserStatsDao
-                AppDatabase.getDatabase(context).userStatsDao()
 
         private val TAG = "AppRepositoryUsageLogs"
 
@@ -54,6 +49,8 @@ class AppRepository(
                 // the
                 // database
                 withContext(Dispatchers.IO) { // Perform in IO context
+                        val existingApps = appInfoDao.getAllApps().firstOrNull()?.associateBy { it.packageName } ?: emptyMap()
+
                         val packageManager = context.packageManager // Get PackageManager
                         val intent =
                                 Intent(Intent.ACTION_MAIN, null)
@@ -100,12 +97,15 @@ class AppRepository(
                                                         null
                                                 }
 
+                                        val existingApp = existingApps[packageName]
+
                                         AppInfo(
                                                 packageName,
                                                 label,
                                                 iconByteArray,
                                                 isInstalled = true,
-                                                lastUpdated = System.currentTimeMillis()
+                                                lastUpdated = System.currentTimeMillis(),
+                                                isWhitelisted = existingApp?.isWhitelisted ?: false
                                         )
                                 }
                         appInfoDao.insertOrUpdateAllApps(apps) // Insert or update all fetched apps
@@ -128,6 +128,10 @@ class AppRepository(
 
         suspend fun insertOrUpdateApp(appInfo: AppInfo) { // Insert or update a single app
                 appInfoDao.insertOrUpdateApp(appInfo)
+        }
+
+        suspend fun setWhitelisted(packageName: String, isWhitelisted: Boolean) {
+                appInfoDao.setWhitelisted(packageName, isWhitelisted)
         }
 
         // --- AppUsage (Old - to be reviewed if still needed or replaced by UsageCard) --- REMOVED

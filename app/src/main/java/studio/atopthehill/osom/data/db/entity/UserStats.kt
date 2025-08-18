@@ -13,5 +13,6 @@ data class UserStats(
         val totalUsageToday: Duration,
         val lastInteraction: LocalDateTime,
         val userName: String?,
-        val dayStartTimeHour: Int = 3 // Hour of the day (0-23) when the 'day' officially starts
+        val dayStartTimeHour: Int = 3, // Hour of the day (0-23) when the 'day' officially starts
+        val activeReminders: Boolean = true // Whether active reminders are enabled
 )

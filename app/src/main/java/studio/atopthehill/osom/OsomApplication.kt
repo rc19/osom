@@ -4,6 +4,7 @@ import android.app.Application // Importing the base Application class
 import kotlinx.coroutines.CoroutineScope // For launching coroutines
 import kotlinx.coroutines.Dispatchers // For defining coroutine dispatchers
 import kotlinx.coroutines.SupervisorJob // For creating a cancellable coroutine scope
+import studio.atopthehill.osom.data.db.AppDatabase
 import studio.atopthehill.osom.data.repository.AppRepository // Importing the AppRepository
 
 class OsomApplication :
@@ -19,7 +20,13 @@ class OsomApplication :
     // Lazy initialization of the AppRepository. It will be created only when first accessed.
     // The database and repository are initialized using the application context.
     val appRepository: AppRepository by lazy { // Lazily initialized AppRepository instance
-        AppRepository(applicationContext) // Pass application context to the repository
+        val database = AppDatabase.getDatabase(applicationContext)
+        AppRepository(
+            applicationContext,
+            database.appInfoDao(),
+            database.usageCardDao(),
+            database.userStatsDao()
+        )
     }
 
     override fun onCreate() { // Called when the application is starting, before any other objects

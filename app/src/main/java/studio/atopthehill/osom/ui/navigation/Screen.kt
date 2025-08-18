@@ -7,4 +7,5 @@ sealed class Screen(val route: String) {
     object Summary : Screen("summary")
     object Permissions : Screen("permissions")
     object AddTask : Screen("addTask")
+    object ControlCenter : Screen("controlCenter")
 }

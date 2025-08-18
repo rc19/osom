@@ -17,8 +17,10 @@ data class AppInfo(
         val isInstalled: Boolean = true, // Flag to indicate if the app is currently installed
         @ColumnInfo(name = "last_updated")
         val lastUpdated: Long =
-                System.currentTimeMillis() // Timestamp of when this app info was last updated or
+                System.currentTimeMillis(), // Timestamp of when this app info was last updated or
 // fetched
+        @ColumnInfo(name = "is_whitelisted")
+        val isWhitelisted: Boolean = false // Flag to indicate if the app is whitelisted for monitoring
 ) {
     // Overriding equals and hashCode to ensure proper comparison, especially if used in sets or as
     // map keys
@@ -36,6 +38,7 @@ data class AppInfo(
         } else if (other.icon != null)
                 return false // If this icon is null and other is not, not equal
         if (isInstalled != other.isInstalled) return false // Compare installation status
+        if (isWhitelisted != other.isWhitelisted) return false // Compare whitelist status
         // lastUpdated can differ, so it's often excluded from equality checks unless specifically
         // needed for versioning of the entity itself
 
@@ -50,6 +53,7 @@ data class AppInfo(
                 31 * result +
                         (icon?.contentHashCode() ?: 0) // Combine with icon hash code (or 0 if null)
         result = 31 * result + isInstalled.hashCode() // Combine with installation status hash code
+        result = 31 * result + isWhitelisted.hashCode() // Combine with whitelist status hash code
         // lastUpdated is often excluded here as well
         return result // Return the final hash code
     }

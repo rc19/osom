@@ -16,14 +16,17 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Alarm
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,6 +39,7 @@ import studio.atopthehill.osom.ui.theme.OSOMTheme
 import java.time.LocalDateTime
 
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TodayScreen(
     pendingTasks: List<UsageCard>,
@@ -43,9 +47,20 @@ fun TodayScreen(
     onAddTask: () -> Unit,
     onTaskCompleted: (UsageCard) -> Unit,
     onTaskSnoozed: (UsageCard) -> Unit,
-    onTaskDismissed: (UsageCard) -> Unit
+    onTaskDismissed: (UsageCard) -> Unit,
+    onSettingsClicked: () -> Unit
 ) {
     Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Today") },
+                actions = {
+                    IconButton(onClick = onSettingsClicked) {
+                        Icon(Icons.Filled.Settings, contentDescription = "Settings")
+                    }
+                }
+            )
+        },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddTask) {
                 Icon(Icons.Filled.Add, contentDescription = "Add Task")
@@ -182,7 +197,8 @@ fun TodayScreenPreview_Empty() {
             onAddTask = {},
             onTaskCompleted = {},
             onTaskSnoozed = {},
-            onTaskDismissed = {}
+            onTaskDismissed = {},
+            onSettingsClicked = {}
         )
     }
 }
@@ -202,7 +218,8 @@ fun TodayScreenPreview_WithTasks() {
             onAddTask = {},
             onTaskCompleted = {},
             onTaskSnoozed = {},
-            onTaskDismissed = {}
+            onTaskDismissed = {},
+            onSettingsClicked = {}
         )
     }
 }
