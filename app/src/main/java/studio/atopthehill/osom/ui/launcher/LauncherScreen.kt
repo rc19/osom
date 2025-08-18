@@ -126,7 +126,6 @@ fun LauncherScreen(
         )
     )
 ) {
-    val showOnboarding by launcherViewModel.showOnboarding.collectAsStateWithLifecycle()
     val navigateToRoute by launcherViewModel.navigateToRoute.collectAsStateWithLifecycle()
 
     LaunchedEffect(navigateToRoute) {
@@ -136,13 +135,9 @@ fun LauncherScreen(
         }
     }
 
-    if (showOnboarding) {
-        OnboardingCarousel(
-            onOnboardingComplete = onOnboardingComplete
-        )
-    } else {
-        MainLauncherContent(navController, launcherViewModel)
-    }
+    OnboardingCarousel(
+        onOnboardingComplete = onOnboardingComplete
+    )
 }
 
 data class OnboardingPageData(

@@ -30,6 +30,7 @@ import studio.atopthehill.osom.ui.today.TodayViewModel
 import studio.atopthehill.osom.ui.today.TodayViewModelFactory
 import studio.atopthehill.osom.ui.addtask.AddTaskScreen
 import studio.atopthehill.osom.ui.controlcenter.ControlCenterScreen
+import studio.atopthehill.osom.utils.OnboardingManager
 import studio.atopthehill.osom.utils.PermissionManager
 
 class MainActivity : ComponentActivity() {
@@ -66,15 +67,15 @@ fun OsomApp() {
     val context = LocalContext.current
     val application = context.applicationContext as OsomApplication
 
+    val onboardingManager = OnboardingManager(context)
     val launcherViewModel: studio.atopthehill.osom.ui.launcher.LauncherViewModel = viewModel(
         factory = studio.atopthehill.osom.ui.launcher.LauncherViewModelFactory(application)
     )
     val todayViewModel: TodayViewModel = viewModel(
         factory = TodayViewModelFactory(application)
     )
-    val showOnboarding by launcherViewModel.showOnboarding.collectAsStateWithLifecycle()
 
-    val startDestination = if (showOnboarding) {
+    val startDestination = if (!onboardingManager.isOnboardingCompleted()) {
         Screen.Launcher.route
     } else {
         if (PermissionManager.hasUsageStatsPermission(context) &&
@@ -104,9 +105,8 @@ fun OsomApp() {
         composable(Screen.Launcher.route) {
             LauncherScreen(
                 navController = navController,
-                launcherViewModel = launcherViewModel,
                 onOnboardingComplete = {
-                    launcherViewModel.onOnboardingComplete()
+                    onboardingManager.setOnboardingCompleted()
                     if (PermissionManager.hasUsageStatsPermission(context) &&
                         PermissionManager.hasAccessibilityPermission(context) &&
                         PermissionManager.hasOverlayPermission(context) &&

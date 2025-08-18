@@ -58,9 +58,7 @@ class LauncherViewModel(application: Application) :
     private val appRepository: AppRepository =
             (application as OsomApplication).appRepository // Get repository from Application
 
-    // --- Onboarding State ---
-    private val _showOnboarding = MutableStateFlow(true) // Show onboarding by default
-    val showOnboarding: StateFlow<Boolean> = _showOnboarding.asStateFlow()
+    
 
     // --- Input States ---
     private val _inputText = MutableStateFlow("")
@@ -439,9 +437,7 @@ class LauncherViewModel(application: Application) :
         _navigateToRoute.value = null
     }
 
-    fun onOnboardingComplete() {
-        _showOnboarding.value = false
-    }
+    
 
     fun loadAllUsageCards() {
         viewModelScope.launch {
