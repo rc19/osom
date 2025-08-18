@@ -43,19 +43,31 @@ class TodayViewModel(
 
     fun onTaskCompleted(task: UsageCard) {
         viewModelScope.launch {
-            appRepository.updateTaskCompletion(task.id, TaskStatus.COMPLETED, LocalDateTime.now())
+            try {
+                appRepository.updateTaskCompletion(task.id, TaskStatus.COMPLETED, LocalDateTime.now())
+            } catch (e: Exception) {
+                // TODO: Handle error (e.g., show a snackbar)
+            }
         }
     }
 
     fun onTaskSnoozed(task: UsageCard) {
         viewModelScope.launch {
-            appRepository.updateTaskTimestamp(task.id, LocalDateTime.now())
+            try {
+                appRepository.updateTaskTimestamp(task.id, LocalDateTime.now())
+            } catch (e: Exception) {
+                // TODO: Handle error
+            }
         }
     }
 
     fun onTaskDismissed(task: UsageCard) {
         viewModelScope.launch {
-            appRepository.updateTaskStatus(task.id, TaskStatus.DISMISSED)
+            try {
+                appRepository.updateTaskStatus(task.id, TaskStatus.DISMISSED)
+            } catch (e: Exception) {
+                // TODO: Handle error
+            }
         }
     }
 
