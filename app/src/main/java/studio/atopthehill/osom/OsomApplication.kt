@@ -17,21 +17,20 @@ class OsomApplication :
                     SupervisorJob() + Dispatchers.Main
             ) // Coroutine scope for application-level tasks
 
-    // Lazy initialization of the AppRepository. It will be created only when first accessed.
-    // The database and repository are initialized using the application context.
-    val appRepository: AppRepository by lazy { // Lazily initialized AppRepository instance
-        val database = AppDatabase.getDatabase(applicationContext)
-        AppRepository(
-            applicationContext,
-            database.appInfoDao(),
-            database.usageCardDao(),
-            database.userStatsDao()
-        )
-    }
+    lateinit var appRepository: AppRepository // Lazily initialized AppRepository instance
 
     override fun onCreate() { // Called when the application is starting, before any other objects
         // have been created
         super.onCreate() // Always call the superclass's method
+        if (!::appRepository.isInitialized) {
+            val database = AppDatabase.getDatabase(applicationContext)
+            appRepository = AppRepository(
+                applicationContext,
+                database.appInfoDao(),
+                database.usageCardDao(),
+                database.userStatsDao()
+            )
+        }
         // You could perform initial setup here, like the first app refresh, if desired.
         // For example, to ensure the app list is populated on first start:
         // applicationScope.launch(Dispatchers.IO) {
