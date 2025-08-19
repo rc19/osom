@@ -5,7 +5,7 @@ As of date: Aug 19, 2025
 
 ### 1. Project Overview
 
-Osom is an Android application that functions as a custom launcher and an accessibility tool. Its primary goal is to reduce cognitive load by tracking application usage, analyzing on-screen content, and managing notifications. It appears to be built with modern Android development practices, using Kotlin, Jetpack Compose, and Room. The app now features a comprehensive onboarding experience for new users and a Control Center to manage which applications are monitored.
+Osom is an Android application that functions as a custom launcher and an accessibility tool. Its primary goal is to reduce cognitive load by tracking application usage, analyzing on-screen content, and managing notifications. It appears to be built with modern Android development practices, using Kotlin, Jetpack Compose, and Room. The app now features a comprehensive onboarding experience for new users, a Control Center to manage which applications are monitored, and a **Nudge System** to provide timely and context-aware notifications.
 
 ### 2. Core Components
 
@@ -16,6 +16,8 @@ The project is structured into three main layers: UI, Services, and Data.
     *   `OsomAccessibilityService`: To read screen content and context from **whitelisted applications**.
     *   `OsomNotificationListenerService`: To capture and process notifications.
     *   `AppTimerService`: To track time spent in different apps.
+    *   **`NudgeEngine.kt`**: A rule-based engine responsible for sending active, contextual reminders to the user.
+    *   **`NudgeManager.kt`**: A utility class for creating and displaying notifications.
 *   **Data Layer:** Manages the application's data using a Room database and a repository pattern. It now includes an `OnboardingManager` to track the completion of the initial user onboarding.
 
 ### 3. Permissions
@@ -64,7 +66,6 @@ The app uses a Room database (`AppDatabase.kt`) with the following entities:
     *   `totalScreenTime`: Total screen time.
     *   `unlocks`: Number of device unlocks.
     *   `notificationsReceived`: Number of notifications received.
-    *   `activeReminders`: (New) A boolean flag to enable or disable active reminders.
 
 ### 6. UI Layer (Jetpack Compose)
 
@@ -78,17 +79,21 @@ The app uses a Room database (`AppDatabase.kt`) with the following entities:
 
 ### 7. Services Layer
 
-*   **`OsomAccessibilityService.kt`**: This service has the ability to inspect the content of the screen. It has been updated to **only monitor applications that are whitelisted** by the user in the Control Center. The service can now be dynamically configured to listen to events from specific packages.
+*   **`OsomAccessibilityService.kt`**: This service has the ability to inspect the content of the screen. It has been updated to **only monitor applications that are whitelisted** by the user in the Control Center. The service can now be dynamically configured to listen to events from specific packages. It is also responsible for **creating tasks and sending silent "New Task Saved" notifications** when a whitelisted app is launched.
 *   **`OsomNotificationListenerService.kt`**: This service receives all notifications posted by other applications. It can be used to log, analyze, or even dismiss notifications based on certain rules.
 *   **`AppTimerService.kt`**: This service likely runs in the foreground to track the amount of time the user spends in each application.
+*   **Nudge System:** A new system designed to provide timely and context-aware notifications.
+    *   **`NudgeEngine.kt`**: The brains of the Nudge System. It runs in the background and observes the app's state (e.g., the current foreground app, the list of pending tasks). It contains a set of rules to determine when to send **active, contextual reminders** to the user.
+    *   **`NudgeManager.kt`**: A utility class responsible for creating and displaying both silent and active notifications. It handles the construction of the notification UI, including actions like "Mark as Done".
+    *   **`NudgeActionReceiver.kt`**: A `BroadcastReceiver` that listens for and handles user actions from notifications, such as marking a task as complete.
 
 ### 8. Data Layer
 
-*   **`AppRepository.kt`**: Follows the repository pattern, acting as a single source of truth for the application's data. It abstracts the data sources (the Room database) from the rest of the app, particularly the ViewModels. It now includes a `setWhitelisted` method to update the monitoring status of an app.
-*   **DAOs (`AppInfoDao`, `UsageCardDao`, `UserStatsDao`)**: Data Access Objects for the Room database. They define the SQL queries for interacting with the database tables. `UsageCardDao` has been updated with queries to manage task status and timestamps.
+*   **`AppRepository.kt`**: Follows the repository pattern, acting as a single source of truth for the application's data. It abstracts the data sources (the Room database) from the rest of the app, particularly the ViewModels. It now includes a `setWhitelisted` method to update the monitoring status of an app and a `getLatestUsageCardForPackage` method to retrieve the most recent task for a given app.
+*   **DAOs (`AppInfoDao`, `UsageCardDao`, `UserStatsDao`)**: Data Access Objects for the Room database. They define the SQL queries for interacting with the database tables. `UsageCardDao` has been updated with queries to manage task status and timestamps, and to fetch the latest task for a package.
 *   **`FileLogger.kt` & `UsageStatsLogger.kt`**: Utility classes for logging information to files, which can be useful for debugging and analysis.
 *   **`OnboardingManager.kt`**: (New) A utility class that uses `SharedPreferences` to track whether the user has completed the initial onboarding flow.
 
 ### Summary of Findings
 
-Osom is a complex Android application with a clear purpose. It combines a custom launcher with powerful background services to create a context-aware user experience. The use of modern Android development tools and a well-defined architecture suggests a solid foundation. The core of the application lies in its ability to gather and process large amounts of data about user behavior to provide intelligent assistance. The recent additions of an onboarding flow and a control center give users more control and a better initial experience.
+Osom is a complex Android application with a clear purpose. It combines a custom launcher with powerful background services to create a context-aware user experience. The use of modern Android development tools and a well-defined architecture suggests a solid foundation. The core of the application lies in its ability to gather and process large amounts of data about user behavior to provide intelligent assistance. The recent additions of an onboarding flow, a control center, and a **rule-based Nudge System** give users more control and a better, more interactive experience.
