@@ -187,6 +187,10 @@ class AppRepository(
                 usageCardDao.deleteUsageCardById(id)
         }
 
+        suspend fun getLatestUsageCardForPackage(packageName: String): UsageCard? {
+                return usageCardDao.getLatestUsageCardForPackage(packageName)
+        }
+
         // --- UserStats Operations ---
         fun getUserStats(): Flow<UserStats?> = userStatsDao.getUserStats()
 

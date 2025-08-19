@@ -81,4 +81,7 @@ interface UsageCardDao {
                 timestampMillis: Long,
                 toleranceMillis: Long
         ): Flow<List<UsageCard>>
+
+        @Query("SELECT * FROM usage_cards WHERE packageName = :packageName ORDER BY timestamp DESC LIMIT 1")
+        suspend fun getLatestUsageCardForPackage(packageName: String): UsageCard?
 }

@@ -19,8 +19,11 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import studio.atopthehill.osom.OsomApplication
 import studio.atopthehill.osom.config.LogConfig
+import studio.atopthehill.osom.data.db.entity.UsageCard
 import studio.atopthehill.osom.data.repository.AppRepository
 import studio.atopthehill.osom.utils.FileLogger
+import studio.atopthehill.osom.utils.managers.NudgeManager
+import java.time.LocalDateTime
 
 class OsomAccessibilityService : AccessibilityService() {
 
@@ -28,7 +31,9 @@ class OsomAccessibilityService : AccessibilityService() {
     private val serviceJob = SupervisorJob()
     private val serviceScope = CoroutineScope(Dispatchers.Main + serviceJob)
 
+    private var lastActivePackage: String? = null
     private lateinit var appRepository: AppRepository
+    private lateinit var nudgeManager: NudgeManager
 
     companion object {
         const val ACTION_SET_ACCESSIBILITY_TARGET =
@@ -68,6 +73,7 @@ class OsomAccessibilityService : AccessibilityService() {
     override fun onCreate() {
         super.onCreate()
         appRepository = (application as OsomApplication).appRepository
+        nudgeManager = NudgeManager(this)
         val intentFilter =
                 IntentFilter().apply {
                     addAction(ACTION_SET_ACCESSIBILITY_TARGET)
@@ -138,6 +144,7 @@ class OsomAccessibilityService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        nudgeManager = NudgeManager(this)
         Log.d(TAG, "onServiceConnected: Accessibility Service connected.")
         // Initial configuration: listen to no specific package until a target is set.
         val info = AccessibilityServiceInfo()
@@ -153,6 +160,35 @@ class OsomAccessibilityService : AccessibilityService() {
         if (event == null) return
 
         val packageName = event.packageName?.toString() ?: return
+        val eventType = event.eventType
+
+        if (eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            if (packageName != lastActivePackage) {
+                (application as OsomApplication).foregroundApp.value = packageName
+
+                serviceScope.launch {
+                    val whitelistedApps = appRepository.allInstalledApps.first().filter { it.isWhitelisted }
+                    val isWhitelisted = whitelistedApps.any { it.packageName == packageName }
+
+                    if (isWhitelisted) {
+                        val appInfo = appRepository.getAppByPackageName(packageName)
+                        val appName = appInfo?.label ?: packageName
+                        val taskTitle = "Opened $appName"
+
+                        val usageCard = UsageCard(
+                            appName = appName,
+                            packageName = packageName,
+                            timestamp = LocalDateTime.now(),
+                            title = taskTitle
+                        )
+                        appRepository.insertUsageCard(usageCard)
+                        nudgeManager.showSilentNotification("Osom saved a new task: '$taskTitle'")
+                    }
+                }
+                lastActivePackage = packageName
+            }
+        }
+
         val currentServiceInfo = serviceInfo
 
         serviceScope.launch {
@@ -169,18 +205,18 @@ class OsomAccessibilityService : AccessibilityService() {
             if (LogConfig.logAccessibilityEvents) {
                 val currentPackageFilters =
                     currentServiceInfo?.packageNames?.joinToString(", ") ?: "ALL (null)"
-                val eventType = AccessibilityEvent.eventTypeToString(event.eventType)
+                val eventTypeString = AccessibilityEvent.eventTypeToString(event.eventType)
                 val className = event.className?.toString() ?: "N/A"
                 // val eventText = event.text?.joinToString(", ") ?: "N/A" // We will log more detailed
                 // text below
 
                 Log.d(
                     TAG,
-                    "AccessibilityEvent: Pkg[$packageName], Type[$eventType], Class[$className], CurrentFilters[$currentPackageFilters]"
+                    "AccessibilityEvent: Pkg[$packageName], Type[$eventTypeString], Class[$className], CurrentFilters[$currentPackageFilters]"
                 )
                 FileLogger.log(
                     TAG,
-                    "AccessibilityEvent: Pkg[$packageName], Type[$eventType], Class[$className], CurrentFilters[$currentPackageFilters]"
+                    "AccessibilityEvent: Pkg[$packageName], Type[$eventTypeString], Class[$className], CurrentFilters[$currentPackageFilters]"
                 )
 
                 // Log detailed window content if canRetrieveWindowContent is enabled
@@ -195,7 +231,7 @@ class OsomAccessibilityService : AccessibilityService() {
                         sourceNode.recycle() // Important to recycle nodes
                     } else {
                         val noSourceLog =
-                            "Event source node is null for Pkg[$packageName], Type[$eventType]"
+                            "Event source node is null for Pkg[$packageName], Type[$eventTypeString]"
                         Log.d(TAG, noSourceLog)
                         FileLogger.log(TAG, noSourceLog)
                     }

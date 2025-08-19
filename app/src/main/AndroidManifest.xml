@@ -73,6 +73,15 @@
             </intent-filter>
         </service>
 
+        <receiver
+            android:name=".services.NudgeActionReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="studio.atopthehill.osom.services.action.MARK_AS_DONE" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
 </manifest>

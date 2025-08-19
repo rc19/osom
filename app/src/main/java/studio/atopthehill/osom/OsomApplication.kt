@@ -4,8 +4,11 @@ import android.app.Application // Importing the base Application class
 import kotlinx.coroutines.CoroutineScope // For launching coroutines
 import kotlinx.coroutines.Dispatchers // For defining coroutine dispatchers
 import kotlinx.coroutines.SupervisorJob // For creating a cancellable coroutine scope
+import kotlinx.coroutines.flow.MutableStateFlow
 import studio.atopthehill.osom.data.db.AppDatabase
 import studio.atopthehill.osom.data.repository.AppRepository // Importing the AppRepository
+import studio.atopthehill.osom.utils.engine.NudgeEngine
+import studio.atopthehill.osom.utils.managers.NudgeManager
 
 class OsomApplication :
         Application() { // Custom Application class inheriting from Android's Application
@@ -17,6 +20,8 @@ class OsomApplication :
                     SupervisorJob() + Dispatchers.Main
             ) // Coroutine scope for application-level tasks
 
+    val foregroundApp = MutableStateFlow<String>("")
+    private lateinit var nudgeEngine: NudgeEngine
     lateinit var appRepository: AppRepository // Lazily initialized AppRepository instance
 
     override fun onCreate() { // Called when the application is starting, before any other objects
@@ -31,6 +36,8 @@ class OsomApplication :
                 database.userStatsDao()
             )
         }
+        nudgeEngine = NudgeEngine(appRepository, NudgeManager(this), foregroundApp)
+        nudgeEngine.start()
         // You could perform initial setup here, like the first app refresh, if desired.
         // For example, to ensure the app list is populated on first start:
         // applicationScope.launch(Dispatchers.IO) {
