@@ -163,6 +163,9 @@ class OsomAccessibilityService : AccessibilityService() {
                 return@launch
             }
 
+            // TODO: Process events to gather insights
+            Log.d(TAG, "Event from whitelisted app received: $packageName")
+
             if (LogConfig.logAccessibilityEvents) {
                 val currentPackageFilters =
                     currentServiceInfo?.packageNames?.joinToString(", ") ?: "ALL (null)"
