@@ -1,5 +1,5 @@
 Project name: Osom (An android accesibility app to retain context across the mobile device by analysing the screen at all times and managinf relevant infiormation. Meant to reduce congnitive load by remembering things on their behalf and prompting the user at the right time for reminders/follow ups.)
-As of date: Aug 19, 2025
+As of date: Aug 20, 2025
 
 ## Project Analysis
 
@@ -22,16 +22,21 @@ The project is structured into three main layers: UI, Services, and Data.
 
 ### 3. Permissions
 
-The application requires a significant number of permissions to function correctly, as defined in `AndroidManifest.xml`:
+The application uses a **comprehensive 4-step permission wizard** during onboarding to ensure all critical permissions are granted for full functionality:
 
+#### **Multi-Step Permission Onboarding:**
+*   **Step 1 - Accessibility Service** (`BIND_ACCESSIBILITY_SERVICE`): To monitor screen content from whitelisted applications for task detection.
+*   **Step 2 - Usage Stats Access** (`PACKAGE_USAGE_STATS`): To track app usage time and provide usage insights.
+*   **Step 3 - Display Over Other Apps** (`SYSTEM_ALERT_WINDOW`): To show reminders and notifications over other apps when needed.
+*   **Step 4 - Show Notifications** (`POST_NOTIFICATIONS`): To send important notifications like app update reminders (Android 13+).
+
+#### **Additional System Permissions:**
 *   `QUERY_ALL_PACKAGES`: To get a list of all installed applications for the launcher.
 *   `KILL_BACKGROUND_PROCESSES`: To manage running applications.
-*   `POST_NOTIFICATIONS`: To show its own notifications.
 *   `FOREGROUND_SERVICE` & `FOREGROUND_SERVICE_DATA_SYNC`: To run background services reliably.
-*   `PACKAGE_USAGE_STATS`: To access application usage history.
 *   `WRITE_EXTERNAL_STORAGE`: To log information to files.
-*   `BIND_ACCESSIBILITY_SERVICE`: To use the accessibility service.
-*   `SYSTEM_ALERT_WINDOW`: To draw over other apps (potentially for reminders or prompts).
+
+The enhanced `PermissionScreen.kt` provides a sophisticated wizard with progress tracking, detailed explanations for each permission, and comprehensive status overview to ensure users understand why each permission is needed.
 
 ### 4. Dependencies
 
@@ -71,6 +76,7 @@ The app uses a Room database (`AppDatabase.kt`) with the following entities:
 *   **`MainActivity.kt`**: The main entry point of the application. It sets up the Compose content and the navigation. It now checks for onboarding completion to determine the initial screen.
 *   **`LauncherScreen.kt` / `LauncherViewModel.kt`**: This is the main screen of the app. It now includes an **onboarding carousel** for first-time users. The ViewModel (`LauncherViewModel`) is responsible for fetching the list of installed apps from the `AppRepository` and providing them to the UI.
 *   **`TodayScreen.kt` / `TodayViewModel.kt`**: This is the main dashboard of the app, showing a list of pending tasks. The ViewModel is responsible for fetching tasks from the `AppRepository` and handling user actions like completing, dismissing, or snoozing a task. It now includes a settings icon to navigate to the Control Center.
+*   **`PermissionScreen.kt` / `PermissionViewModel.kt`**: **Enhanced 4-step permission wizard** (395+ lines) that guides users through all required permissions with progress tracking, detailed explanations, and comprehensive status overview. The ViewModel (97+ lines) provides methods to check and manage all critical permissions including accessibility, usage stats, overlay, and notification permissions.
 *   **`AppListScreen.kt`**: A screen that likely displays a complete list of all installed applications.
 *   **`SummaryScreen.kt`**: A screen to display usage statistics and other relevant information, likely populated by the `UsageCard` entity.
 *   **`ControlCenterScreen.kt` / `ControlCenterViewModel.kt`**: (New) This screen allows the user to manage which apps are monitored by the accessibility service by whitelisting them. It also provides a toggle to enable or disable active reminders.
@@ -92,7 +98,50 @@ The app uses a Room database (`AppDatabase.kt`) with the following entities:
 *   **DAOs (`AppInfoDao`, `UsageCardDao`, `UserStatsDao`)**: Data Access Objects for the Room database. They define the SQL queries for interacting with the database tables. `UsageCardDao` has been updated with queries to manage task status and timestamps, and to fetch the latest task for a package.
 *   **`FileLogger.kt` & `UsageStatsLogger.kt`**: Utility classes for logging information to files, which can be useful for debugging and analysis.
 *   **`OnboardingManager.kt`**: (New) A utility class that uses `SharedPreferences` to track whether the user has completed the initial onboarding flow.
+*   **`PermissionManager.kt`**: Enhanced utility class for managing all app permissions with expanded functionality to handle the 4-step permission wizard flow.
+
+### 9. Testing Framework
+
+The project now includes comprehensive testing infrastructure to ensure reliability and correctness:
+
+#### **Unit Testing:**
+*   **`PermissionViewModelTest.kt`**: Extensive testing (276 lines) for all permission management logic using Robolectric for Android-specific testing. Tests all 4 permission types and edge cases.
+*   **`PermissionManagerTest.kt`**: Enhanced tests (85+ lines updated) for the expanded permission management functionality.
+*   **`NudgeActionReceiverTest.kt`**: Unit tests (61 lines) for nudge action handling using Mockito for mocking dependencies.
+
+#### **Testing Technologies:**
+*   **JUnit 4**: Primary testing framework used throughout the project.
+*   **Robolectric**: For Android unit tests that need Android context, particularly for permission testing.
+*   **Mockito & Mockito-Kotlin**: For mocking dependencies and testing in isolation.
+*   **Coroutines Testing**: Uses `kotlinx-coroutines-test` for testing asynchronous operations.
+
+#### **Testing Patterns:**
+*   Comprehensive mocking of Android system services (NotificationManager, Context, etc.)
+*   Shadowing of system components for controlled testing environments
+*   Extensive edge case testing for critical functionality like permissions
+
+### 10. Development Guidance
+
+#### **CLAUDE.md - AI Assistant Integration:**
+The project includes comprehensive guidance (214 lines) for AI-assisted development:
+
+*   **Developer Profile**: Tailored for an experienced AI/ML developer (9+ years) who is new to Android development
+*   **Communication Guidelines**: Emphasizes clear explanations of mobile concepts with analogies to Python/ML
+*   **Development Workflow**: Structured process for code changes with mandatory planning and user confirmation
+*   **Code Quality Standards**: Focus on comprehensive comments and Android best practices
+*   **Error Handling Strategy**: Systematic approach to debugging and fixing issues
+
+This documentation ensures consistent, educational, and high-quality development practices when working with AI assistance tools.
 
 ### Summary of Findings
 
-Osom is a complex Android application with a clear purpose. It combines a custom launcher with powerful background services to create a context-aware user experience. The use of modern Android development tools and a well-defined architecture suggests a solid foundation. The core of the application lies in its ability to gather and process large amounts of data about user behavior to provide intelligent assistance. The recent additions of an onboarding flow, a control center, and a **rule-based Nudge System** give users more control and a better, more interactive experience.
+Osom is a complex Android application with a clear purpose. It combines a custom launcher with powerful background services to create a context-aware user experience. The use of modern Android development tools and a well-defined architecture suggests a solid foundation. The core of the application lies in its ability to gather and process large amounts of data about user behavior to provide intelligent assistance. 
+
+**Recent Major Enhancements:**
+*   **Enhanced Permission System**: Comprehensive 4-step permission wizard ensuring all critical permissions are granted during onboarding
+*   **Robust Testing Infrastructure**: Extensive unit testing with Robolectric, Mockito, and comprehensive edge case coverage
+*   **AI-Assisted Development**: Structured development guidance (CLAUDE.md) tailored for AI/ML developers new to Android
+*   **Rule-based Nudge System**: Context-aware notification system with comprehensive action handling
+*   **Control Center**: User-controlled app monitoring with whitelisting capabilities
+
+These additions provide users with better control, clearer permission understanding, and a more reliable, well-tested experience. The project demonstrates strong software engineering practices with comprehensive testing and structured development workflows.
