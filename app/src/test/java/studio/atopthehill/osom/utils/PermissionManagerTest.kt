@@ -2,8 +2,10 @@ package studio.atopthehill.osom.utils
 
 import android.app.Application
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import androidx.test.core.app.ApplicationProvider
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -80,18 +82,6 @@ class PermissionManagerTest {
     }
 
     @Test
-    fun `hasNotificationListenerPermission returns true when service is enabled`() {
-        val componentName = "studio.atopthehill.osom/studio.atopthehill.osom.services.OsomNotificationListenerService"
-        Settings.Secure.putString(
-            context.contentResolver,
-            "enabled_notification_listeners",
-            componentName
-        )
-
-        assertTrue(PermissionManager.hasNotificationListenerPermission(context))
-    }
-
-    @Test
     fun `hasUsageStatsPermission returns false when permission is not granted`() {
         val appOpsManager = context.getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager
         val shadowAppOpsManager = Shadows.shadowOf(appOpsManager) as ShadowAppOpsManager
@@ -128,21 +118,72 @@ class PermissionManagerTest {
     }
 
     @Test
-    fun `hasNotificationListenerPermission returns false when service is not enabled`() {
-        Settings.Secure.putString(
-            context.contentResolver,
-            "enabled_notification_listeners",
-            ""
-        )
-
-        assertFalse(PermissionManager.hasNotificationListenerPermission(context))
-    }
-
-    @Test
     fun `requestAccessibilityPermission with context launches correct intent`() {
         PermissionManager.requestAccessibilityPermission(context)
 
         val startedIntent = shadowApp.nextStartedActivity
         assert(startedIntent.action == Settings.ACTION_ACCESSIBILITY_SETTINGS)
+    }
+
+    @Test
+    @Config(sdk = [Build.VERSION_CODES.TIRAMISU])
+    fun `hasNotificationPermission returns true when POST_NOTIFICATIONS is granted on Android 13+`() {
+        // Grant POST_NOTIFICATIONS permission
+        shadowApp.grantPermissions(android.Manifest.permission.POST_NOTIFICATIONS)
+        
+        assertTrue(PermissionManager.hasNotificationPermission(context))
+    }
+
+    @Test
+    @Config(sdk = [Build.VERSION_CODES.TIRAMISU])
+    fun `hasNotificationPermission returns false when POST_NOTIFICATIONS is not granted on Android 13+`() {
+        // Don't grant POST_NOTIFICATIONS permission (default state)
+        
+        assertFalse(PermissionManager.hasNotificationPermission(context))
+    }
+
+    @Test
+    @Config(sdk = [Build.VERSION_CODES.S])
+    fun `hasNotificationPermission returns true on Android 12 and below regardless of permission state`() {
+        // On Android 12 and below, notifications are allowed by default
+        // Even if we don't grant the permission, it should return true
+        
+        assertTrue(PermissionManager.hasNotificationPermission(context))
+    }
+
+    @Test
+    @Config(sdk = [Build.VERSION_CODES.Q])
+    fun `hasNotificationPermission returns true on Android 10`() {
+        // POST_NOTIFICATIONS permission didn't exist on Android 10
+        // Should always return true
+        
+        assertTrue(PermissionManager.hasNotificationPermission(context))
+    }
+
+    @Test
+    fun `REQUIRED_PERMISSIONS contains expected permissions`() {
+        val requiredPermissions = PermissionManager.REQUIRED_PERMISSIONS
+        
+        assertTrue(requiredPermissions.contains(android.Manifest.permission.POST_NOTIFICATIONS))
+        assertTrue(requiredPermissions.contains(android.Manifest.permission.WRITE_EXTERNAL_STORAGE))
+        assertEquals(2, requiredPermissions.size)
+    }
+
+    @Test
+    fun `requestUsageStatsPermission launches correct intent`() {
+        val activity = Robolectric.buildActivity(android.app.Activity::class.java).get()
+        PermissionManager.requestUsageStatsPermission(activity)
+
+        val startedIntent = shadowApp.nextStartedActivity
+        assert(startedIntent.action == android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS)
+    }
+
+    @Test
+    fun `requestOverlayPermission launches correct intent`() {
+        val activity = Robolectric.buildActivity(android.app.Activity::class.java).get()
+        PermissionManager.requestOverlayPermission(activity)
+
+        val startedIntent = shadowApp.nextStartedActivity
+        assert(startedIntent.action == android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
     }
 }

@@ -18,10 +18,27 @@ object PermissionManager {
 
     const val REQUEST_CODE_PERMISSIONS = 101
 
+    // Regular permissions that can be requested directly
     val REQUIRED_PERMISSIONS = arrayOf(
         Manifest.permission.POST_NOTIFICATIONS,
         Manifest.permission.WRITE_EXTERNAL_STORAGE
     )
+    
+    /**
+     * Check if notification permission is granted.
+     * This is critical for app update notifications to work.
+     */
+    fun hasNotificationPermission(context: Context): Boolean {
+        return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            // Notifications are allowed by default on Android 12 and below
+            true
+        }
+    }
 
     fun checkAndRequestPermissions(activity: Activity) {
         val permissionsToRequest = mutableListOf<String>()
@@ -110,19 +127,6 @@ object PermissionManager {
             )
             activity.startActivity(intent)
         }
-    }
-
-    fun hasNotificationListenerPermission(context: Context): Boolean {
-        val enabledListeners = Settings.Secure.getString(
-            context.contentResolver,
-            "enabled_notification_listeners"
-        )
-        return enabledListeners?.contains(context.packageName) == true
-    }
-
-    fun requestNotificationListenerPermission(activity: Activity) {
-        val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
-        activity.startActivity(intent)
     }
 
     fun setNotificationListenerState(context: Context, enabled: Boolean) {

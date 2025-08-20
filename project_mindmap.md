@@ -32,7 +32,6 @@ The application requires a significant number of permissions to function correct
 *   `WRITE_EXTERNAL_STORAGE`: To log information to files.
 *   `BIND_ACCESSIBILITY_SERVICE`: To use the accessibility service.
 *   `SYSTEM_ALERT_WINDOW`: To draw over other apps (potentially for reminders or prompts).
-*   `BIND_NOTIFICATION_LISTENER_SERVICE`: To read notifications.
 
 ### 4. Dependencies
 

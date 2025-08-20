@@ -81,7 +81,7 @@ fun OsomApp() {
         if (PermissionManager.hasUsageStatsPermission(context) &&
             PermissionManager.hasAccessibilityPermission(context) &&
             PermissionManager.hasOverlayPermission(context) &&
-            PermissionManager.hasNotificationListenerPermission(context)) {
+            PermissionManager.hasNotificationPermission(context)) {
             Screen.Today.route
         } else {
             Screen.Permissions.route
@@ -109,8 +109,7 @@ fun OsomApp() {
                     onboardingManager.setOnboardingCompleted()
                     if (PermissionManager.hasUsageStatsPermission(context) &&
                         PermissionManager.hasAccessibilityPermission(context) &&
-                        PermissionManager.hasOverlayPermission(context) &&
-                        PermissionManager.hasNotificationListenerPermission(context)) {
+                        PermissionManager.hasOverlayPermission(context)) {
                         navController.navigate(Screen.Today.route) {
                             popUpTo(Screen.Launcher.route) { inclusive = true }
                         }
