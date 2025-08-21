@@ -20,6 +20,7 @@ import kotlinx.coroutines.launch
 import studio.atopthehill.osom.OsomApplication
 import studio.atopthehill.osom.config.LogConfig
 import studio.atopthehill.osom.data.db.entity.UsageCard
+import studio.atopthehill.osom.ai.LLMTaskEnhancer
 import studio.atopthehill.osom.data.repository.AppRepository
 import studio.atopthehill.osom.utils.FileLogger
 import studio.atopthehill.osom.utils.managers.NudgeManager
@@ -34,6 +35,7 @@ class OsomAccessibilityService : AccessibilityService() {
     private var lastActivePackage: String? = null
     private lateinit var appRepository: AppRepository
     private lateinit var nudgeManager: NudgeManager
+    private lateinit var llmTaskEnhancer: LLMTaskEnhancer
 
     companion object {
         const val ACTION_SET_ACCESSIBILITY_TARGET =
@@ -74,6 +76,17 @@ class OsomAccessibilityService : AccessibilityService() {
         super.onCreate()
         appRepository = (application as OsomApplication).appRepository
         nudgeManager = NudgeManager(this)
+        llmTaskEnhancer = LLMTaskEnhancer(appRepository)
+        
+        // Initialize AI backend asynchronously
+        serviceScope.launch {
+            try {
+                llmTaskEnhancer.initialize()
+                Log.d(TAG, "LLM Task Enhancer initialized: ${llmTaskEnhancer.getStatus()}")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to initialize LLM Task Enhancer", e)
+            }
+        }
         val intentFilter =
                 IntentFilter().apply {
                     addAction(ACTION_SET_ACCESSIBILITY_TARGET)
@@ -173,16 +186,43 @@ class OsomAccessibilityService : AccessibilityService() {
                     if (isWhitelisted) {
                         val appInfo = appRepository.getAppByPackageName(packageName)
                         val appName = appInfo?.label ?: packageName
-                        val taskTitle = "Opened $appName"
+                        
+                        // Extract accessibility text for AI processing
+                        val accessibilityText = extractAccessibilityText(event)
+                        
+                        // Use AI-enhanced task creation
+                        serviceScope.launch {
+                            try {
+                                val taskTitle = llmTaskEnhancer.enhanceTask(
+                                    accessibilityText = accessibilityText,
+                                    appPackage = packageName,
+                                    appName = appName
+                                )
 
-                        val usageCard = UsageCard(
-                            appName = appName,
-                            packageName = packageName,
-                            timestamp = LocalDateTime.now(),
-                            title = taskTitle
-                        )
-                        appRepository.insertUsageCard(usageCard)
-                        nudgeManager.showSilentNotification("Osom saved a new task: '$taskTitle'")
+                                val usageCard = UsageCard(
+                                    appName = appName,
+                                    packageName = packageName,
+                                    timestamp = LocalDateTime.now(),
+                                    title = taskTitle
+                                )
+                                appRepository.insertUsageCard(usageCard)
+                                nudgeManager.showSilentNotification("Osom saved a new task: '$taskTitle'")
+                                
+                                Log.d(TAG, "Created task with title: $taskTitle")
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Error creating AI-enhanced task, using fallback", e)
+                                // Fallback to simple task creation
+                                val fallbackTitle = "Opened $appName"
+                                val usageCard = UsageCard(
+                                    appName = appName,
+                                    packageName = packageName,
+                                    timestamp = LocalDateTime.now(),
+                                    title = fallbackTitle
+                                )
+                                appRepository.insertUsageCard(usageCard)
+                                nudgeManager.showSilentNotification("Osom saved a new task: '$fallbackTitle'")
+                            }
+                        }
                     }
                 }
                 lastActivePackage = packageName
@@ -516,7 +556,96 @@ class OsomAccessibilityService : AccessibilityService() {
     override fun onDestroy() {
         super.onDestroy()
         LocalBroadcastManager.getInstance(this).unregisterReceiver(accessibilityTargetReceiver)
+        
+        // Clean up LLM resources
+        serviceScope.launch {
+            try {
+                if (::llmTaskEnhancer.isInitialized) {
+                    llmTaskEnhancer.cleanup()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error during LLM cleanup", e)
+            }
+        }
+        
+        serviceJob.cancel()
         Log.d(TAG, "Accessibility Service onDestroy, receiver unregistered.")
         FileLogger.log(TAG, "Accessibility Service onDestroy, receiver unregistered.")
+    }
+
+    /**
+     * Extract meaningful text content from accessibility events for AI processing.
+     * This method gathers text from the current screen that can provide context
+     * for generating better task descriptions.
+     */
+    private fun extractAccessibilityText(event: AccessibilityEvent): String {
+        val textContent = mutableListOf<String>()
+        
+        // Get text from the event itself
+        event.text?.forEach { charSequence ->
+            charSequence?.toString()?.takeIf { it.isNotBlank() }?.let { 
+                textContent.add(it) 
+            }
+        }
+        
+        // Get text from content description
+        event.contentDescription?.toString()?.takeIf { it.isNotBlank() }?.let {
+            textContent.add(it)
+        }
+        
+        // Try to get text from the root node if available
+        try {
+            rootInActiveWindow?.let { rootNode ->
+                extractTextFromNode(rootNode, textContent, maxDepth = 3)
+                rootNode.recycle()
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Error extracting text from root node", e)
+        }
+        
+        // Join all text with spaces and limit length for AI processing
+        val result = textContent.distinct()
+            .joinToString(" ")
+            .trim()
+            .take(1000) // Limit to 1000 characters for MVP
+        
+        Log.d(TAG, "Extracted accessibility text (${result.length} chars): ${result.take(200)}...")
+        return result
+    }
+    
+    /**
+     * Recursively extract text from accessibility node hierarchy.
+     * Limited depth to avoid performance issues.
+     */
+    private fun extractTextFromNode(
+        node: AccessibilityNodeInfo?,
+        textContent: MutableList<String>,
+        currentDepth: Int = 0,
+        maxDepth: Int = 3
+    ) {
+        if (node == null || currentDepth > maxDepth || textContent.size > 20) {
+            return // Avoid too much text extraction for performance
+        }
+        
+        // Get text from current node
+        node.text?.toString()?.takeIf { it.isNotBlank() }?.let {
+            textContent.add(it)
+        }
+        
+        // Get content description
+        node.contentDescription?.toString()?.takeIf { it.isNotBlank() }?.let {
+            textContent.add(it)
+        }
+        
+        // Process children
+        try {
+            for (i in 0 until minOf(node.childCount, 10)) { // Limit children processed
+                val child = node.getChild(i)
+                extractTextFromNode(child, textContent, currentDepth + 1, maxDepth)
+                child?.recycle()
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Error processing child nodes at depth $currentDepth", e)
+        }
     }
 }

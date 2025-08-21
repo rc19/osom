@@ -14,5 +14,6 @@ data class UserStats(
         val lastInteraction: LocalDateTime,
         val userName: String?,
         val dayStartTimeHour: Int = 3, // Hour of the day (0-23) when the 'day' officially starts
-        val activeReminders: Boolean = true // Whether active reminders are enabled
+        val activeReminders: Boolean = true, // Whether active reminders are enabled
+        val enableAITasks: Boolean = false // Whether AI-powered task enhancement is enabled (MVP feature)
 )

@@ -228,6 +228,19 @@ class AppRepository(
                 }
         }
 
+        // AI Tasks setting methods for MVP LLM integration
+        suspend fun setAITasksEnabled(enabled: Boolean) {
+                withContext(Dispatchers.IO) {
+                        userStatsDao.setAITasksEnabled(enabled)
+                }
+        }
+
+        suspend fun isAITasksEnabled(): Boolean {
+                return withContext(Dispatchers.IO) {
+                        userStatsDao.getUserStatsDirect()?.enableAITasks ?: false
+                }
+        }
+
         // --- Package Usage Stats Logging ---
         /* Commenting out as this is being consolidated into utils.UsageStatsLogger
         @Suppress("SimpleDateFormat") // Using for specific log format

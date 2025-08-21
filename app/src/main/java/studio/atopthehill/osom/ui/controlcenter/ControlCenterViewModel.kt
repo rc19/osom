@@ -43,6 +43,12 @@ class ControlCenterViewModel(private val appRepository: AppRepository) : ViewMod
             }
         }
     }
+
+    fun setAITasksEnabled(isEnabled: Boolean) {
+        viewModelScope.launch {
+            appRepository.setAITasksEnabled(isEnabled)
+        }
+    }
 }
 
 class ControlCenterViewModelFactory(private val application: Application) : ViewModelProvider.Factory {

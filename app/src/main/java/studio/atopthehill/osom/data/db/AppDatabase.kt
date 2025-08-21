@@ -22,7 +22,7 @@ import studio.atopthehill.osom.data.db.entity.UserStats
                         AppInfo::class, /*AppUsage::class,*/
                         UsageCard::class,
                         UserStats::class], // AppUsage removed
-        version = 8, // Incremented version from 7 to 8
+        version = 9, // Incremented version from 8 to 9 for AI tasks feature
         exportSchema = true // Recommended to set to true and manage schemas
 )
 @TypeConverters(Converters::class) // Added TypeConverters
@@ -40,6 +40,13 @@ abstract class AppDatabase : RoomDatabase() { // Abstract class for the Room dat
         val MIGRATION_7_8 = object : Migration(7, 8) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE user_stats ADD COLUMN activeReminders INTEGER NOT NULL DEFAULT 1")
+            }
+        }
+
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Add enableAITasks column with default value false (0 in SQLite)
+                database.execSQL("ALTER TABLE user_stats ADD COLUMN enableAITasks INTEGER NOT NULL DEFAULT 0")
             }
         }
 
@@ -70,7 +77,7 @@ abstract class AppDatabase : RoomDatabase() { // Abstract class for the Room dat
                                                 AppDatabase::class.java,
                                                 "osom_database" // Name of the database file
                                         )
-                                        .addMigrations(MIGRATION_7_8) // Add migrations if not
+                                        .addMigrations(MIGRATION_7_8, MIGRATION_8_9) // Add migrations if not
                                         // .fallbackToDestructiveMigration() // Destroys and recreates
                                         // if no migration found -
                                         // USE WITH CAUTION

@@ -77,9 +77,11 @@ fun ControlCenterScreen() {
                 }
             }
             Divider(modifier = Modifier.padding(vertical = 16.dp))
-            NotificationPreferences(userStats = userStats, onActiveRemindersChanged = {
-                viewModel.setActiveReminders(it)
-            })
+            NotificationPreferences(
+                userStats = userStats,
+                onActiveRemindersChanged = { viewModel.setActiveReminders(it) },
+                onAITasksEnabledChanged = { viewModel.setAITasksEnabled(it) }
+            )
             Divider(modifier = Modifier.padding(vertical = 16.dp))
             ManagePermissions()
         }
@@ -114,13 +116,39 @@ fun AppListItem(app: AppInfo, onToggle: (String, Boolean) -> Unit) {
 }
 
 @Composable
-fun NotificationPreferences(userStats: studio.atopthehill.osom.data.db.entity.UserStats?, onActiveRemindersChanged: (Boolean) -> Unit) {
+fun NotificationPreferences(
+    userStats: studio.atopthehill.osom.data.db.entity.UserStats?, 
+    onActiveRemindersChanged: (Boolean) -> Unit,
+    onAITasksEnabledChanged: (Boolean) -> Unit
+) {
     Column {
         Text(
-            text = "Notification Preferences",
+            text = "Smart Features",
             style = MaterialTheme.typography.titleLarge
         )
         Spacer(modifier = Modifier.height(8.dp))
+        
+        // AI Task Creation Toggle
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = "Smart Task Creation")
+                Text(
+                    text = "Analyze screen content to create meaningful tasks",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            Switch(
+                checked = userStats?.enableAITasks ?: false, 
+                onCheckedChange = onAITasksEnabledChanged
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        // Active Reminders Toggle
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically

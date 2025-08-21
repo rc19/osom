@@ -25,4 +25,12 @@ interface UserStatsDao {
     // Potentially, methods to update specific fields if needed frequently
     // e.g., @Query("UPDATE user_stats SET dailyInteractions = dailyInteractions + 1 WHERE id = 1")
     // suspend fun incrementDailyInteractions()
+    
+    // Update AI tasks setting specifically (for better performance than full entity update)
+    @Query("UPDATE user_stats SET enableAITasks = :enabled WHERE id = 1")
+    suspend fun setAITasksEnabled(enabled: Boolean)
+    
+    // Update active reminders setting specifically
+    @Query("UPDATE user_stats SET activeReminders = :enabled WHERE id = 1")
+    suspend fun setActiveReminders(enabled: Boolean)
 }
