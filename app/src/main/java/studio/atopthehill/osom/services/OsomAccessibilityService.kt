@@ -156,18 +156,50 @@ class OsomAccessibilityService : AccessibilityService() {
         // AndroidManifest.xml references accessibility_service_config.xml where these are set.
     }
 
+    /**
+     * Initialize the accessibility service with only whitelisted apps to prevent
+     * unwanted task creation from non-whitelisted apps.
+     */
+    private suspend fun initializeWithWhitelistedApps() {
+        try {
+            val whitelistedApps = appRepository.allInstalledApps.first().filter { it.isWhitelisted }
+            val whitelistedPackages = whitelistedApps.map { it.packageName }.toTypedArray()
+            
+            Log.d(TAG, "Initializing accessibility service with ${whitelistedPackages.size} whitelisted apps: ${whitelistedPackages.joinToString()}")
+            
+            // Use updateServiceInfo to set whitelisted apps as targets
+            // If no apps are whitelisted, use empty array to listen to nothing
+            if (whitelistedPackages.isNotEmpty()) {
+                updateServiceInfo(whitelistedPackages)
+            } else {
+                updateServiceInfo(emptyArray())
+                Log.d(TAG, "No whitelisted apps found, accessibility service will not listen to any apps")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error initializing with whitelisted apps, falling back to no targets", e)
+            updateServiceInfo(emptyArray())
+        }
+    }
+
+    /**
+     * Refresh the accessibility service targets when the whitelist changes.
+     * This should be called when apps are added/removed from the whitelist.
+     */
+    fun refreshWhitelistTargets() {
+        serviceScope.launch {
+            initializeWithWhitelistedApps()
+        }
+    }
+
     override fun onServiceConnected() {
         super.onServiceConnected()
         nudgeManager = NudgeManager(this)
         Log.d(TAG, "onServiceConnected: Accessibility Service connected.")
-        // Initial configuration: listen to no specific package until a target is set.
-        val info = AccessibilityServiceInfo()
-        initializeServiceInfoObject(info) // Set default flags, event types etc.
-        info.packageNames = null // Initially, don't target any specific package; listen to all.
-
-        // Apply the initial configuration
-        setServiceInfo(info)
-        Log.d(TAG, "Service Info configured initially. Target packages: ALL (null)")
+        
+        // Initialize with whitelisted apps only to prevent listening to non-whitelisted apps
+        serviceScope.launch {
+            initializeWithWhitelistedApps()
+        }
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {

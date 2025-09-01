@@ -47,6 +47,8 @@ The project relies on several key libraries from the Android Jetpack and Kotlin 
 *   **Room:** For local database storage (ORM).
 *   **Coroutines:** For asynchronous programming.
 *   **Coil:** For image loading (used for app icons).
+*   **MediaPipe GenAI Tasks 0.10.24:** For on-device AI task enhancement using Gemma3-1B-IT model.
+*   **WorkManager:** For background task management and model download coordination.
 
 ### 5. Database Schema (Room)
 
@@ -79,15 +81,20 @@ The app uses a Room database (`AppDatabase.kt`) with the following entities:
 *   **`PermissionScreen.kt` / `PermissionViewModel.kt`**: **Enhanced 4-step permission wizard** (395+ lines) that guides users through all required permissions with progress tracking, detailed explanations, and comprehensive status overview. The ViewModel (97+ lines) provides methods to check and manage all critical permissions including accessibility, usage stats, overlay, and notification permissions.
 *   **`AppListScreen.kt`**: A screen that likely displays a complete list of all installed applications.
 *   **`SummaryScreen.kt`**: A screen to display usage statistics and other relevant information, likely populated by the `UsageCard` entity.
-*   **`ControlCenterScreen.kt` / `ControlCenterViewModel.kt`**: (New) This screen allows the user to manage which apps are monitored by the accessibility service by whitelisting them. It also provides a toggle to enable or disable active reminders.
+*   **`ControlCenterScreen.kt` / `ControlCenterViewModel.kt`**: This screen allows the user to manage which apps are monitored by the accessibility service by whitelisting them. It also provides toggles for AI task enhancement and active reminders, giving users control over the app's intelligent features.
 *   **`Screen.kt`**: Defines the navigation routes for the application using a sealed class. It now includes a `ControlCenter` route.
 
 ### 7. Services Layer
 
-*   **`OsomAccessibilityService.kt`**: This service has the ability to inspect the content of the screen. It has been updated to **only monitor applications that are whitelisted** by the user in the Control Center. The service can now be dynamically configured to listen to events from specific packages. It is also responsible for **creating tasks and sending silent "New Task Saved" notifications** when a whitelisted app is launched.
+*   **`OsomAccessibilityService.kt`**: This service has the ability to inspect the content of the screen. It has been updated to **only monitor applications that are whitelisted** by the user in the Control Center. The service can now be dynamically configured to listen to events from specific packages. It is also responsible for **creating AI-enhanced tasks and sending silent "New Task Saved" notifications** when a whitelisted app is launched.
 *   **`OsomNotificationListenerService.kt`**: This service receives all notifications posted by other applications. It can be used to log, analyze, or even dismiss notifications based on certain rules.
-*   **`AppTimerService.kt`**: This service likely runs in the foreground to track the amount of time the user spends in each application.
-*   **Nudge System:** A new system designed to provide timely and context-aware notifications.
+*   **`AppTimerService.kt`**: This service runs in the foreground to track the amount of time the user spends in each application.
+*   **AI Task Enhancement System:** On-device AI system for intelligent task generation.
+    *   **`LLMTaskEnhancer.kt`**: Orchestrates AI-powered task enhancement, managing backend selection and fallback strategies.
+    *   **`MediaPipeBackend.kt`**: Implements on-device AI using Google's MediaPipe GenAI Tasks with Gemma3-1B-IT model (~600MB). Transforms raw accessibility text into meaningful task descriptions with timeout protection and resource management.
+    *   **`MediaPipeModelHelper.kt`**: Manages model lifecycle, loading, validation, and inference sessions. Handles device compatibility checking and graceful error handling.
+    *   **`SimpleLLMBackend.kt`**: Interface for LLM backends, enabling dependency injection and future backend extensibility.
+*   **Nudge System:** A system designed to provide timely and context-aware notifications.
     *   **`NudgeEngine.kt`**: The brains of the Nudge System. It runs in the background and observes the app's state (e.g., the current foreground app, the list of pending tasks). It contains a set of rules to determine when to send **active, contextual reminders** to the user.
     *   **`NudgeManager.kt`**: A utility class responsible for creating and displaying both silent and active notifications. It handles the construction of the notification UI, including actions like "Mark as Done".
     *   **`NudgeActionReceiver.kt`**: A `BroadcastReceiver` that listens for and handles user actions from notifications, such as marking a task as complete.
@@ -135,13 +142,15 @@ This documentation ensures consistent, educational, and high-quality development
 
 ### Summary of Findings
 
-Osom is a complex Android application with a clear purpose. It combines a custom launcher with powerful background services to create a context-aware user experience. The use of modern Android development tools and a well-defined architecture suggests a solid foundation. The core of the application lies in its ability to gather and process large amounts of data about user behavior to provide intelligent assistance. 
+Osom is a complex Android application with a clear purpose. It combines a custom launcher with powerful background services to create a context-aware user experience. The use of modern Android development tools and a well-defined architecture suggests a solid foundation. The core of the application lies in its ability to gather and process large amounts of data about user behavior to provide intelligent assistance through on-device AI.
 
-**Recent Major Enhancements:**
+**Key Current Features:**
+*   **On-Device AI Task Enhancement**: Uses MediaPipe GenAI with Gemma3-1B-IT model to transform accessibility text into meaningful task descriptions (requires ~600MB model file download)
+*   **Privacy-First Architecture**: Only monitors user-whitelisted applications, with all AI processing happening entirely on-device
 *   **Enhanced Permission System**: Comprehensive 4-step permission wizard ensuring all critical permissions are granted during onboarding
 *   **Robust Testing Infrastructure**: Extensive unit testing with Robolectric, Mockito, and comprehensive edge case coverage
 *   **AI-Assisted Development**: Structured development guidance (CLAUDE.md) tailored for AI/ML developers new to Android
 *   **Rule-based Nudge System**: Context-aware notification system with comprehensive action handling
-*   **Control Center**: User-controlled app monitoring with whitelisting capabilities
+*   **Control Center**: User-controlled app monitoring with whitelisting and AI feature toggles
 
 These additions provide users with better control, clearer permission understanding, and a more reliable, well-tested experience. The project demonstrates strong software engineering practices with comprehensive testing and structured development workflows.
