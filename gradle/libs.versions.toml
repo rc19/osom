@@ -19,6 +19,8 @@ robolectric = "4.15.1"
 androidx-test-ext-junit = "1.2.1"
 androidxArchCoreTesting = "2.2.0"
 kotlinxCoroutinesTest = "1.7.3"
+mediaPipeGenai = "0.10.24"
+workRuntime = "2.8.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -51,6 +53,8 @@ robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectr
 androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidx-test-ext-junit" }
 androidx-arch-core-testing = { group = "androidx.arch.core", name = "core-testing", version.ref = "androidxArchCoreTesting" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutinesTest" }
+mediapipe-genai = { module = "com.google.mediapipe:tasks-genai", version.ref = "mediaPipeGenai" }
+androidx-work-runtime = { module = "androidx.work:work-runtime-ktx", version.ref = "workRuntime" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

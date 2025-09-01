@@ -11,7 +11,7 @@ android {
 
     defaultConfig {
         applicationId = "studio.atopthehill.osom"
-        minSdk = 26
+        minSdk = 28
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -76,6 +76,12 @@ dependencies {
 
     // Coil for Icon Painter
     implementation(libs.coil.compose)
+
+    // MediaPipe GenAI for on-device LLM
+    implementation(libs.mediapipe.genai)
+    
+    // WorkManager for model download management
+    implementation(libs.androidx.work.runtime)
 
     // Add this for LocalBroadcastManager (deprecated, but needed for current approach)
     implementation(libs.androidx.legacy.support.v4)

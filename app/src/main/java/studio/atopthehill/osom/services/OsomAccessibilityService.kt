@@ -21,6 +21,7 @@ import studio.atopthehill.osom.OsomApplication
 import studio.atopthehill.osom.config.LogConfig
 import studio.atopthehill.osom.data.db.entity.UsageCard
 import studio.atopthehill.osom.ai.LLMTaskEnhancer
+import studio.atopthehill.osom.ai.MediaPipeBackend
 import studio.atopthehill.osom.data.repository.AppRepository
 import studio.atopthehill.osom.utils.FileLogger
 import studio.atopthehill.osom.utils.managers.NudgeManager
@@ -76,7 +77,7 @@ class OsomAccessibilityService : AccessibilityService() {
         super.onCreate()
         appRepository = (application as OsomApplication).appRepository
         nudgeManager = NudgeManager(this)
-        llmTaskEnhancer = LLMTaskEnhancer(appRepository)
+        llmTaskEnhancer = LLMTaskEnhancer(appRepository, MediaPipeBackend(this))
         
         // Initialize AI backend asynchronously
         serviceScope.launch {

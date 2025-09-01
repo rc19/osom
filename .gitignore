@@ -71,3 +71,6 @@ Thumbs.db
 *.bak
 *.swp
 *~.nib
+
+# model files
+*.task

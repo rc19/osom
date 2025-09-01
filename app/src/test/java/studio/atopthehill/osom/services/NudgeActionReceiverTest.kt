@@ -4,6 +4,7 @@ import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
@@ -53,6 +54,9 @@ class NudgeActionReceiverTest {
 
         // When
         nudgeActionReceiver.onReceive(context, intent)
+        
+        // Wait for coroutine to complete (the receiver uses CoroutineScope(Dispatchers.IO))
+        delay(100) // Small delay to allow async operations to complete
 
         // Then
         verify(appRepository).updateTaskStatus(taskId, TaskStatus.COMPLETED)
